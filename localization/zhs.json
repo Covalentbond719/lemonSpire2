@@ -2,5 +2,11 @@
   "damage.title": "伤害统计",
   "damage.combat": "本局伤害",
   "damage.total": "总伤害",
-  "pause_menu.retry": "重打"
+  "stats.title": "统计",
+  "stats.combat_damage": "本局伤害",
+  "stats.total_damage": "总伤害",
+  "pause_menu.retry": "重打",
+  "chat.placeholder": "输入消息...",
+  "chat.send": "发送",
+  "chat.toggle": "聊天"
 }

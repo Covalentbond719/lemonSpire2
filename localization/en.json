@@ -2,5 +2,11 @@
   "damage.title": "Damage Stats",
   "damage.combat": "Combat Damage",
   "damage.total": "Total Damage",
-  "pause_menu.retry": "Retry"
+  "stats.title": "Stats",
+  "stats.combat_damage": "Combat Damage",
+  "stats.total_damage": "Total Damage",
+  "pause_menu.retry": "Retry",
+  "chat.placeholder": "Type a message...",
+  "chat.send": "Send",
+  "chat.toggle": "Chat"
 }

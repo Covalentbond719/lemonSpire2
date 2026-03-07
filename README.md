@@ -1,8 +1,12 @@
 # Lemon Spire 2 / 柠檬塔2
 
+受薄荷尖塔启发的模组，主要面向杀戮尖塔2（尤其是多人模式）提供一些便利功能。
+
+A mod inspired by Mint Spire, mainly providing some QoL for Slay the Spire 2 (especially multiplayer mode).
+
 WIP / 施工中
 
-是我之前三个 Mod 的集合。
+目前是我之前三个 Mod 的集合。
 
 包含：
 

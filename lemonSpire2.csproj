@@ -41,9 +41,7 @@
             <HintPath>$(Sts2DataDir)/sts2.dll</HintPath>
             <Publicize>False</Publicize> <!--Allows private/protected field references but may cause errors.-->
         </Reference>
-<!--        <Reference Include="BaseLib">-->
-<!--            <HintPath>$(Sts2Path)/mods/BaseLib.dll</HintPath>-->
-<!--        </Reference>-->
+        
 
         <PackageReference Include="Alchyr.Sts2.ModAnalyzers" Version="0.0.1"/>
         <AdditionalFiles Include="lemonSpire2\localization\**\*.json"/>
@@ -64,6 +62,7 @@
 
     <ItemGroup>
         <Content Include=".gitignore"/>
+        <Content Include="localization\**" />
         <Content Include="mod_manifest.json"/>
         <Content Include="project.godot"/>
         <Content Include="lemonSpire2\**"/>

@@ -4,10 +4,11 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 
-namespace lemonSpire2.HandshakeIndicator;
+namespace lemonSpire2.SynergyIndicator;
 
+[HarmonyPatchCategory("HandshakeIndicator")]
 [HarmonyPatch(typeof(NMultiplayerPlayerState))]
-public static class HandshakeIndicatorPatch
+public static class SynergyIndicatorPatch
 {
     private static readonly FieldInfo? CharacterIconField =
         typeof(NMultiplayerPlayerState).GetField("_characterIcon", BindingFlags.NonPublic | BindingFlags.Instance);
