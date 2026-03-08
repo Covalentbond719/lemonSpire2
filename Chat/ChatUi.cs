@@ -42,6 +42,9 @@ public partial class ChatUi : Panel
         AnchorRight = 0;
         AnchorBottom = 1;
 
+        // 初始状态：折叠，鼠标穿透
+        MouseFilter = MouseFilterEnum.Ignore;
+
         CreateUi();
         UpdateLayout();
     }
@@ -66,7 +69,7 @@ public partial class ChatUi : Panel
             BbcodeEnabled = true,
             ScrollActive = true,
             ScrollFollowing = true,
-            MouseFilter = MouseFilterEnum.Stop
+            MouseFilter = MouseFilterEnum.Ignore
         };
         _outputBuffer.AddThemeColorOverride("default_color", Colors.White);
         _outputBuffer.AddThemeFontSizeOverride("normal_font_size", FontSize);
@@ -76,7 +79,7 @@ public partial class ChatUi : Panel
         _inputContainer = new HBoxContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            MouseFilter = MouseFilterEnum.Stop
+            MouseFilter = MouseFilterEnum.Ignore
         };
         AddChild(_inputContainer);
 
@@ -95,7 +98,7 @@ public partial class ChatUi : Panel
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             PlaceholderText = ModLocalization.Get("chat.placeholder", "Type a message..."),
-            MouseFilter = MouseFilterEnum.Stop,
+            MouseFilter = MouseFilterEnum.Ignore,
             CaretBlink = true
         };
         _inputBuffer.AddThemeColorOverride("font_color", Colors.White);
@@ -161,14 +164,20 @@ public partial class ChatUi : Panel
 
     public override void _Process(double delta)
     {
-        // 只在折叠状态下处理淡出逻辑
-        if (_isExpanded || _isFadedOut)
+        // 展开状态不处理淡出
+        if (_isExpanded)
+        {
+            return;
+        }
+
+        // 已完全淡出，保持最小可见性以接收输入
+        if (_isFadedOut)
         {
             return;
         }
 
         var timeSinceLastMessage = Time.GetTicksMsec() / 1000.0 - _lastMessageTime;
-        if (!(timeSinceLastMessage >= FadeOutDelaySeconds))
+        if (timeSinceLastMessage < FadeOutDelaySeconds)
         {
             return;
         }
@@ -183,6 +192,8 @@ public partial class ChatUi : Panel
         if (alpha <= 0f)
         {
             _isFadedOut = true;
+            // 保持极低可见性以确保能接收输入事件
+            Modulate = new Color(1f, 1f, 1f, 0.01f);
         }
     }
 
@@ -286,16 +297,28 @@ public partial class ChatUi : Panel
     private void SetExpanded(bool expanded)
     {
         _isExpanded = expanded;
-        // ResetFadeOut(); // 发消息再保持吧。
+        ResetFadeOut(); // 展开时重置淡出状态
         UpdateLayout();
 
         if (expanded)
         {
+            // 展开时拦截鼠标事件
+            MouseFilter = MouseFilterEnum.Stop;
+            _outputBuffer.MouseFilter = MouseFilterEnum.Stop;
+            _inputContainer.MouseFilter = MouseFilterEnum.Stop;
+            _inputBuffer.MouseFilter = MouseFilterEnum.Stop;
+            
             _inputBuffer.CallDeferred(Control.MethodName.GrabFocus);
             RenderMessages(); // 重新渲染所有消息
         }
         else
         {
+            // 折叠时让鼠标穿透
+            MouseFilter = MouseFilterEnum.Ignore;
+            _outputBuffer.MouseFilter = MouseFilterEnum.Ignore;
+            _inputContainer.MouseFilter = MouseFilterEnum.Ignore;
+            _inputBuffer.MouseFilter = MouseFilterEnum.Ignore;
+            
             _inputBuffer.ReleaseFocus();
             GetViewport()?.GuiReleaseFocus();
             RenderMessages(); // 只渲染最近几条
