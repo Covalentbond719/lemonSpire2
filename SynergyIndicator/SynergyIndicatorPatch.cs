@@ -4,16 +4,18 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 
-namespace lemonSpire2.HandshakeIndicator;
+namespace lemonSpire2.SynergyIndicator;
 
+[HarmonyPatchCategory("HandshakeIndicator")]
 [HarmonyPatch(typeof(NMultiplayerPlayerState))]
-public static class HandshakeIndicatorPatch
+public static class SynergyIndicatorPatch
 {
-    private static readonly FieldInfo? CharacterIconField =
-        typeof(NMultiplayerPlayerState).GetField("_characterIcon", BindingFlags.NonPublic | BindingFlags.Instance);
+    private const string HandshakeEmoji = "🤝";
+
+    private static readonly FieldInfo? TopContainerField =
+        typeof(NMultiplayerPlayerState).GetField("_topContainer", BindingFlags.NonPublic | BindingFlags.Instance);
 
     private static readonly Dictionary<NMultiplayerPlayerState, Label> _indicators = new();
-    private const string HandshakeEmoji = "🤝";
 
     [HarmonyPostfix]
     [HarmonyPatch("_Ready")]
@@ -42,35 +44,48 @@ public static class HandshakeIndicatorPatch
 
     private static void CreateIndicator(NMultiplayerPlayerState instance)
     {
-        if (_indicators.ContainsKey(instance)) return;
+        if (_indicators.ContainsKey(instance))
+        {
+            return;
+        }
 
-        var icon = CharacterIconField?.GetValue(instance) as TextureRect;
-        if (icon == null) return;
+        var topContainer = TopContainerField?.GetValue(instance) as HBoxContainer;
+        if (topContainer == null)
+        {
+            return;
+        }
 
+#pragma warning disable CA2000 // Label 所有权转移到场景树，由 RemoveIndicator 管理
         var label = new Label
         {
             Name = "HandshakeIndicator",
             Text = HandshakeEmoji,
             Visible = false
         };
-        label.AddThemeFontSizeOverride("font_size", 16);
+#pragma warning restore CA2000
+        label.AddThemeFontSizeOverride("font_size", 24);
 
-        var parent = icon.GetParent();
-        parent.AddChild(label);
-        parent.MoveChild(label, icon.GetIndex() + 1);
+        topContainer.AddChild(label);
 
         _indicators[instance] = label;
     }
 
     private static void RemoveIndicator(NMultiplayerPlayerState instance)
     {
+#pragma warning disable CA2000 // 从 Dictionary 取出的对象，所有权已由此方法管理
         if (_indicators.Remove(instance, out var label) && GodotObject.IsInstanceValid(instance))
+#pragma warning restore CA2000
+        {
             label.QueueFree();
+        }
     }
 
     private static void UpdateIndicator(NMultiplayerPlayerState instance)
     {
-        if (!_indicators.TryGetValue(instance, out var label)) return;
+        if (!_indicators.TryGetValue(instance, out var label))
+        {
+            return;
+        }
 
         var cards = instance.Player?.PlayerCombatState?.Hand?.Cards;
         if (cards == null)

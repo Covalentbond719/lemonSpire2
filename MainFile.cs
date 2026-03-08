@@ -1,8 +1,12 @@
-using System.Reflection;
 using Godot;
 using HarmonyLib;
+using lemonSpire2.Chat;
+using lemonSpire2.PlayerTooltip;
+using lemonSpire2.StatsTracker;
+using lemonSpire2.SynergyIndicator;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Modding;
-using lemonSpire2.DamageTracker;
+using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2;
 
@@ -11,17 +15,49 @@ public partial class MainFile : Node
 {
     internal const string ModId = "lemonSpire2";
 
-    public static MegaCrit.Sts2.Core.Logging.Logger Logger { get; } =
-        new(ModId, MegaCrit.Sts2.Core.Logging.LogType.Generic);
+    public static Logger Logger { get; } =
+        new(ModId, LogType.Generic);
 
     public static void Initialize()
     {
         Harmony harmony = new(ModId);
-        harmony.PatchAll(Assembly.GetExecutingAssembly());
 
-        // Initialize DamageTracker
-        DamageTrackerManager.Instance.Initialize();
+        if (EnableChat)
+        {
+            harmony.CreateClassProcessor(typeof(ChatUiPatch)).Patch();
+        }
+
+        if (EnableSynergyIndicator)
+        {
+            harmony.CreateClassProcessor(typeof(SynergyIndicatorPatch)).Patch();
+        }
+
+        if (EnableStatsTracker)
+        {
+            harmony.CreateClassProcessor(typeof(PowerCmdPatch)).Patch();
+            StatsTrackerManager.Instance.Initialize();
+            PlayerTooltipRegistry.Register(new StatsTooltipProvider());
+        }
+
+        if (PlayerTooltipRegistry.HasProviders)
+        {
+            harmony.CreateClassProcessor(typeof(NMultiplayerPlayerStatePatch)).Patch();
+        }
 
         Logger.Info("lemonSpire2 mod initialized");
     }
+
+    #region Feature Flags
+
+    /// <summary>聊天系统 (多人游戏)</summary>
+    public static bool EnableChat { get; set; } = true;
+
+
+    /// <summary>队友辅助指示器</summary>
+    public static bool EnableSynergyIndicator { get; set; } = true;
+
+    /// <summary>统计追踪器</summary>
+    public static bool EnableStatsTracker { get; set; } = true;
+
+    #endregion
 }
