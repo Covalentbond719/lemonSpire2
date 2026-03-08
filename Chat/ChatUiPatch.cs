@@ -12,7 +12,7 @@ namespace lemonSpire2.Chat;
 /// </summary>
 [HarmonyPatchCategory("Chat")]
 [HarmonyPatch(typeof(NGlobalUi))]
-public static class ChatUIPatch
+public static class ChatUiPatch
 {
     internal static readonly WeakNodeRegistry<ChatUi> _chatUIs = new();
 
@@ -57,7 +57,7 @@ public static class ChatUICleanupPatch
         ChatManager.Instance.Cleanup();
 
         // 清理所有聊天UI实例
-        ChatUIPatch._chatUIs.ForEachLive(ui => ui.QueueFree());
+        ChatUiPatch._chatUIs.ForEachLive(ui => ui.QueueFree());
         MainFile.Logger.Debug("ChatUI instances cleaned up");
     }
 }

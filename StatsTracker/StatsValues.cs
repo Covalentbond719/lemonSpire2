@@ -34,7 +34,7 @@ public class StatsValues
     public void ResetCombatStats()
     {
         var combatKeys = _values.Keys
-            .Where(k => k.StartsWith("stats.combat."))
+            .Where(k => k.StartsWith("stats.combat.", StringComparison.Ordinal))
             .ToList();
         foreach (var key in combatKeys)
         {

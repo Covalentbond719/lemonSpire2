@@ -26,10 +26,7 @@ public class StatsTrackerManager
         CombatManager.Instance.CombatEnded += OnCombatEnded;
     }
 
-    private void OnRunStarted(RunState _)
-    {
-        Reset();
-    }
+    private void OnRunStarted(RunState _) => Reset();
 
     private void OnCombatSetUp(CombatState _)
     {
@@ -80,7 +77,7 @@ public class StatsTrackerManager
         {
             return;
         }
-        
+
         var damage = entry.Result.TotalDamage;
         if (damage <= 0)
         {
@@ -111,7 +108,7 @@ public class StatsTrackerManager
 
             extraDamage = Math.Max(0, damage - (int)baseDamage);
         }
-        
+
         var stats = GetOrCreateStats(player.NetId);
         stats.Add("stats.combat.damage", damage);
         stats.Add("stats.combat.extra_damage", extraDamage);

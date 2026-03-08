@@ -72,7 +72,9 @@ public static class SynergyIndicatorPatch
 
     private static void RemoveIndicator(NMultiplayerPlayerState instance)
     {
+#pragma warning disable CA2000 // 从 Dictionary 取出的对象，所有权已由此方法管理
         if (_indicators.Remove(instance, out var label) && GodotObject.IsInstanceValid(instance))
+#pragma warning restore CA2000
         {
             label.QueueFree();
         }

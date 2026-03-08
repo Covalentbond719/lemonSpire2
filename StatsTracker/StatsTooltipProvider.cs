@@ -68,6 +68,7 @@ public class StatsTooltipProvider : ITooltipProvider
                     var groupTitle = ModLocalization.Get(prefix, prefix);
                     lines.Add($"[{groupTitle}]");
                 }
+
                 // 显示时移除前缀，只保留最后一部分
                 var displayKey = parts.Length >= 3 ? string.Join(".", parts.Skip(2)) : parts[^1];
                 var localizedName = ModLocalization.Get(key, displayKey);

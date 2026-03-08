@@ -19,6 +19,8 @@ public partial class ChatUi : Panel
     private const float FadeOutDurationSeconds = 5f;
 
     private readonly List<ChatMessageEntry> _messages = [];
+
+    private bool _hasShownWelcome;
     private LineEdit _inputBuffer = null!;
     private Control _inputContainer = null!;
     private bool _isExpanded;
@@ -121,7 +123,7 @@ public partial class ChatUi : Panel
     private void UpdateLayout()
     {
         var viewportSize = GetViewportRect().Size;
-        var halfWidth = viewportSize.X / 2f;
+        var chatUiWidth = viewportSize.X * 0.3f;
 
         if (_isExpanded)
         {
@@ -129,15 +131,15 @@ public partial class ChatUi : Panel
             var expandedHeight = viewportSize.Y * 0.5f;
             OffsetLeft = 0;
             OffsetTop = -expandedHeight;
-            OffsetRight = halfWidth;
+            OffsetRight = chatUiWidth;
             OffsetBottom = 0;
 
             _outputBuffer.Visible = true;
-            _outputBuffer.Size = new Vector2(halfWidth, expandedHeight - InputHeight);
+            _outputBuffer.Size = new Vector2(chatUiWidth, expandedHeight - InputHeight);
             _outputBuffer.Position = new Vector2(0, 0);
 
             _inputContainer.Visible = true;
-            _inputContainer.Size = new Vector2(halfWidth, InputHeight);
+            _inputContainer.Size = new Vector2(chatUiWidth, InputHeight);
             _inputContainer.Position = new Vector2(0, expandedHeight - InputHeight);
         }
         else
@@ -146,11 +148,11 @@ public partial class ChatUi : Panel
             var collapsedHeight = InputHeight * 2.5f;
             OffsetLeft = 0;
             OffsetTop = -collapsedHeight;
-            OffsetRight = halfWidth;
+            OffsetRight = chatUiWidth;
             OffsetBottom = 0;
 
             _outputBuffer.Visible = true;
-            _outputBuffer.Size = new Vector2(halfWidth, collapsedHeight - InputHeight);
+            _outputBuffer.Size = new Vector2(chatUiWidth, collapsedHeight - InputHeight);
             _outputBuffer.Position = new Vector2(0, 0);
 
             _inputContainer.Visible = false;
@@ -320,8 +322,6 @@ public partial class ChatUi : Panel
             UpdateLayout();
         }
     }
-
-    private bool _hasShownWelcome;
 
     public void SetVisibleForMultiplayer(bool isMultiplayer)
     {

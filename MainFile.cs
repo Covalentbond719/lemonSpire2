@@ -24,7 +24,7 @@ public partial class MainFile : Node
 
         if (EnableChat)
         {
-            harmony.CreateClassProcessor(typeof(ChatUIPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(ChatUiPatch)).Patch();
         }
 
         if (EnableSynergyIndicator)
