@@ -4,6 +4,10 @@
 
 A mod inspired by Mint Spire, mainly providing some QoL for Slay the Spire 2 (especially multiplayer mode).
 
+由于我使用了 Alchyr 的 [BaseLib](https://github.com/Alchyr/BaseLib-StS2/releases) 来解决 Linux 兼容性问题，因此似乎不安装 BaseLib 就无法正常使用这个模组了。
+
+Because I used Alchyr's [BaseLib](https://github.com/Alchyr/BaseLib-StS2/releases) to solve Linux compatibility issues, it seems that the mod cannot be used properly without installing BaseLib.
+
 目前包含功能：
 
 - 多人模式下显示每个玩家的伤害贡献、buff 贡献
