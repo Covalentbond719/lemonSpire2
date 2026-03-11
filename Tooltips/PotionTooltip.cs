@@ -1,6 +1,7 @@
 using Godot;
-using MegaCrit.Sts2.addons.mega_text;
-using MegaCrit.Sts2.Core.Assets;
+using lemonSpire2.util;
+using MegaCrit.Sts2.Core.Entities.Potions;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
@@ -15,10 +16,37 @@ public sealed class PotionTooltip : Tooltip
 
     public static PotionTooltip FromModel(PotionModel potion)
     {
+        ArgumentNullException.ThrowIfNull(potion);
         return new PotionTooltip
         {
             ModelIdStr = potion.Id.Entry
         };
+    }
+    
+    public static Color GetPotionRarityColor(PotionRarity rarity)
+    {
+        return rarity switch
+        {   
+            // potion don't have rarity color definations in the game, so we will just use the same colors as cards
+            PotionRarity.Common => StsColors.cardTitleOutlineCommon,
+            PotionRarity.Uncommon => StsColors.cardTitleOutlineUncommon,
+            PotionRarity.Rare => StsColors.cardTitleOutlineRare,
+            PotionRarity.Event => StsColors.cardTitleOutlineSpecial, // 
+            PotionRarity.Token => StsColors.cardTitleOutlineSpecial,
+            PotionRarity.None => StsColors.cream,
+            _ => throw new ArgumentOutOfRangeException(nameof(rarity), rarity, null)
+        };
+    }
+
+    public override string Render()
+    {
+        var model = ResolveModel();
+        if (model is null) return "Broken Potion";
+
+        var color = GetPotionRarityColor(model.Rarity);
+        var iconPath = model.ImagePath;
+
+        return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title}[/color]";
     }
 
     public override void Serialize(PacketWriter writer)
@@ -33,64 +61,17 @@ public sealed class PotionTooltip : Tooltip
         ModelIdStr = reader.ReadString();
     }
 
-    public override Control? CreatePreview()
+    public override IHoverTip ToHoverTip()
     {
         var model = ResolveModel();
-        if (model is null) return null;
+        if (model is null)
+            throw new InvalidOperationException($"Cannot resolve potion model: {ModelIdStr}");
 
-        return BuildHoverTip(model.HoverTip, model.Image);
+        return model.HoverTip;
     }
 
     private PotionModel? ResolveModel()
     {
-        foreach (var potion in ModelDb.AllPotions)
-            if (potion.Id.Entry == ModelIdStr)
-                return potion;
-        return null;
-    }
-
-    private static Control? BuildHoverTip(HoverTip tip, Texture2D? icon)
-    {
-        try
-        {
-            var control = PreloadManager.Cache
-                .GetScene("res://scenes/ui/hover_tip.tscn")
-                .Instantiate<Control>();
-
-            var title = control.GetNode<MegaLabel>("%Title");
-            if (tip.Title is null)
-                title.Visible = false;
-            else
-                title.SetTextAutoSize(tip.Title);
-
-            control.GetNode<MegaRichTextLabel>("%Description").Text = tip.Description;
-            
-            // Use the potion image directly since HoverTip doesn't include it
-            control.GetNode<TextureRect>("%Icon").Texture = icon;
-
-            if (tip.IsDebuff)
-            {
-                var bg = control.GetNode<CanvasItem>("%Bg");
-                bg.Material = PreloadManager.Cache.GetMaterial("res://materials/ui/hover_tip_debuff.tres");
-            }
-
-            control.ResetSize();
-            SetSubtreeMouseIgnore(control);
-            return control;
-        }
-        catch (Exception ex)
-        {
-            MainFile.Logger.Error($"Failed to build potion hover tip: {ex.Message}");
-            throw;
-        }
-    }
-
-    private static void SetSubtreeMouseIgnore(Node node)
-    {
-        if (node is Control c)
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        foreach (var child in node.GetChildren())
-            SetSubtreeMouseIgnore(child);
+        return Util.ResolveModel<PotionModel>(ModelIdStr);
     }
 }

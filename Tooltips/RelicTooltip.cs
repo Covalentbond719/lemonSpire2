@@ -1,6 +1,7 @@
 using Godot;
-using MegaCrit.Sts2.addons.mega_text;
-using MegaCrit.Sts2.Core.Assets;
+using lemonSpire2.util;
+using MegaCrit.Sts2.Core.Entities.Relics;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
@@ -15,10 +16,38 @@ public sealed class RelicTooltip : Tooltip
 
     public static RelicTooltip FromModel(RelicModel relic)
     {
+        ArgumentNullException.ThrowIfNull(relic);
         return new RelicTooltip
         {
             ModelIdStr = relic.Id.Entry
         };
+    }
+    
+    public static Color GetRelicRarityColor(RelicRarity rarity)
+    {
+        return rarity switch
+        {
+            RelicRarity.Starter => StsColors.cardTitleOutlineCommon,
+            RelicRarity.Common => StsColors.cardTitleOutlineCommon,
+            RelicRarity.Uncommon => StsColors.cardTitleOutlineUncommon,
+            RelicRarity.Rare => StsColors.cardTitleOutlineRare,
+            RelicRarity.Shop => StsColors.cardTitleOutlineSpecial,
+            RelicRarity.Event => StsColors.cardTitleOutlineSpecial,
+            RelicRarity.Ancient => StsColors.cardTitleOutlineSpecial,
+            RelicRarity.None => StsColors.cream,
+            _ => throw new ArgumentOutOfRangeException(nameof(rarity), rarity, null)
+        };
+    }
+
+    public override string Render()
+    {
+        var model = ResolveModel();
+        if (model is null) return "Broken Relic";
+
+        var color = GetRelicRarityColor(model.Rarity);
+        var iconPath = model.IconPath;
+
+        return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title.GetFormattedText()}[/color]";
     }
 
     public override void Serialize(PacketWriter writer)
@@ -33,64 +62,17 @@ public sealed class RelicTooltip : Tooltip
         ModelIdStr = reader.ReadString();
     }
 
-    public override Control? CreatePreview()
+    public override IHoverTip ToHoverTip()
     {
         var model = ResolveModel();
-        if (model is null) return null;
+        if (model is null)
+            throw new InvalidOperationException($"Cannot resolve relic model: {ModelIdStr}");
 
-        return BuildHoverTip(model.HoverTip, model.Icon);
+        return model.HoverTip;
     }
 
     private RelicModel? ResolveModel()
     {
-        foreach (var relic in ModelDb.AllRelics)
-            if (relic.Id.Entry == ModelIdStr)
-                return relic;
-        return null;
-    }
-
-    private static Control? BuildHoverTip(HoverTip tip, Texture2D? icon)
-    {
-        try
-        {
-            var control = PreloadManager.Cache
-                .GetScene("res://scenes/ui/hover_tip.tscn")
-                .Instantiate<Control>();
-
-            var title = control.GetNode<MegaLabel>("%Title");
-            if (tip.Title is null)
-                title.Visible = false;
-            else
-                title.SetTextAutoSize(tip.Title);
-
-            control.GetNode<MegaRichTextLabel>("%Description").Text = tip.Description;
-            
-            // Use the relic icon directly since HoverTip doesn't include it
-            control.GetNode<TextureRect>("%Icon").Texture = icon;
-
-            if (tip.IsDebuff)
-            {
-                var bg = control.GetNode<CanvasItem>("%Bg");
-                bg.Material = PreloadManager.Cache.GetMaterial("res://materials/ui/hover_tip_debuff.tres");
-            }
-
-            control.ResetSize();
-            SetSubtreeMouseIgnore(control);
-            return control;
-        }
-        catch (Exception ex)
-        {
-            MainFile.Logger.Error($"Failed to build relic hover tip: {ex.Message}");
-            throw;
-        }
-    }
-
-    private static void SetSubtreeMouseIgnore(Node node)
-    {
-        if (node is Control c)
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        foreach (var child in node.GetChildren())
-            SetSubtreeMouseIgnore(child);
+        return Util.ResolveModel<RelicModel>(ModelIdStr);
     }
 }

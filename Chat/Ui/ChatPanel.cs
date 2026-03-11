@@ -11,6 +11,9 @@ namespace lemonSpire2.Chat.Ui;
 /// </summary>
 public sealed class ChatPanel : IDisposable
 {
+
+    #region ChatConfig
+
     private const Key ToggleKey = Key.Tab;
     private const int CollapsedVisibleLines = 4;
     private const int FontSize = 18;
@@ -19,6 +22,8 @@ public sealed class ChatPanel : IDisposable
     private const float FadeOutDurationSeconds = 5f;
     private readonly Action<IIntent> _dispatch;
     private readonly List<string> _inputHistory = new();
+
+    #endregion
 
     private readonly ChatModel _model;
     private readonly TooltipManager _tooltipManager = new();
@@ -252,11 +257,10 @@ public sealed class ChatPanel : IDisposable
 
     internal void ProcessFrame(double delta)
     {
-        // Update tooltip position to follow mouse (using viewport coordinates)
-        var viewport = _container?.GetViewport();
-        if (viewport is not null)
+        // Update tooltip position to follow mouse (using global coordinates)
+        if (_container is not null)
         {
-            _tooltipManager.UpdatePreviewPosition(viewport.GetMousePosition());
+            _tooltipManager.UpdatePreviewPosition(_container.GetGlobalMousePosition());
         }
 
         if (_isExpanded || _isFadedOut || _panelStyle == null || _container == null) return;
@@ -387,16 +391,19 @@ public sealed class ChatPanel : IDisposable
         var senderName = message.SenderName ?? $"Player {message.SenderId}";
         var time = message.Timestamp.ToString("HH:mm", CultureInfo.InvariantCulture);
 
-        var color = "#ccccff"; // Default
+        var color = new Color(0.8f, 0.8f, 1f); // #ccccff
 
-        _messageBuffer.PushColor(new Color(0.5f, 0.5f, 0.5f));
+        // [time]
+        _messageBuffer.PushColor(new Color(0.53f, 0.53f, 0.53f)); // #888888
         _messageBuffer.AppendText($"[{time}] ");
         _messageBuffer.Pop();
 
-        _messageBuffer.PushColor(new Color(color));
+        // sender name
+        _messageBuffer.PushColor(color);
         _messageBuffer.AppendText($"{senderName}: ");
         _messageBuffer.Pop();
 
+        // message segments
         foreach (var segment in message.Segments) RenderSegment(segment);
 
         _messageBuffer.AppendText("\n");
@@ -405,58 +412,41 @@ public sealed class ChatPanel : IDisposable
 
     private void RenderSegment(IMsgSegment segment)
     {
-        if (segment is TooltipSegment ts)
-        {
-            var meta = ts.Tooltip.ToMetaString();
-            MainFile.Logger.Debug($"RenderSegment: meta={meta}, displayName={ts.DisplayName}");
-            _messageBuffer!.PushMeta(meta);
-            _messageBuffer.AppendText(ts.DisplayName);
-            _messageBuffer.Pop();
-        }
-        else
-        {
-            _messageBuffer!.AppendText(segment.Render());
-        }
+        if (_messageBuffer is null) return;
+        segment.RenderTo(_messageBuffer);
     }
 }
 
 /// <summary>
 ///     Internal container handling input events and frame updates.
 /// </summary>
-internal sealed partial class ChatPanelContainer : Panel
+internal sealed partial class ChatPanelContainer(ChatPanel owner) : Panel
 {
-    private readonly ChatPanel _owner;
-
-    public ChatPanelContainer(ChatPanel owner)
-    {
-        _owner = owner;
-    }
-
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
-        _owner.Initialize();
+        owner.Initialize();
     }
 
     public override void _ExitTree()
     {
-        _owner.Dispose();
+        owner.Dispose();
     }
 
     public override void _Input(InputEvent @event)
     {
-        if (_owner.HandleInput(@event))
+        if (owner.HandleInput(@event))
             GetViewport()?.SetInputAsHandled();
     }
 
     public override void _Process(double delta)
     {
-        _owner.ProcessFrame(delta);
+        owner.ProcessFrame(delta);
     }
 
     public override void _Notification(int what)
     {
         if (what == NotificationResized)
-            _owner.OnResized();
+            owner.OnResized();
     }
 }

@@ -41,7 +41,7 @@ public static class ChatUiPatch
 #pragma warning restore CA2000
 
         // Add to scene
-        var control = panel.GetControl();
+        var control = panel.GetControl()!; // panel inited , control should be non-null
         globalUi.AddChild(control);
         ChatUIs.Register(control);
 

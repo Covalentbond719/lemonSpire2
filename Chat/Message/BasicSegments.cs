@@ -1,3 +1,4 @@
+using Godot;
 using lemonSpire2.Tooltips;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
@@ -17,6 +18,12 @@ public record RichTextSegment : IMsgSegment
     {
         ArgumentNullException.ThrowIfNull(reader);
         Text = reader.ReadString();
+    }
+
+    public void RenderTo(RichTextLabel label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        label.AppendText(Text);
     }
 
     public string Render()
@@ -51,9 +58,20 @@ public record TooltipSegment : IMsgSegment
         DisplayName = reader.ReadString();
     }
 
+    public void RenderTo(RichTextLabel label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        var meta = Tooltip.ToMetaString();
+        label.PushMeta(meta);
+        label.AppendText("[lb]");
+        label.AppendText(Tooltip.Render());
+        label.AppendText("[rb]");
+        label.Pop();
+    }
+
     public string Render()
     {
         var meta = Tooltip.ToMetaString();
-        return $"[meta={meta}][lb]{DisplayName}[rb][/meta]";
+        return $"[meta={meta}]{Tooltip.Render()}[/meta]";
     }
 }

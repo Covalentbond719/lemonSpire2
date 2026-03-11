@@ -19,7 +19,7 @@ public static class ItemInputHandler
     /// <summary>
     ///     从节点树中查找物品并创建 TooltipSegment
     /// </summary>
-    public static TooltipSegment? FindItemSegment(Node? node)
+    public static TooltipSegment? FindItemToTooltipSegment(Node? node)
     {
         while (node != null)
         {

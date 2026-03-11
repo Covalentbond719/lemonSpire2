@@ -1,6 +1,5 @@
-using Godot;
-using MegaCrit.Sts2.addons.mega_text;
-using MegaCrit.Sts2.Core.Assets;
+using System.Reflection;
+using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
 namespace lemonSpire2.Tooltips;
@@ -11,12 +10,22 @@ namespace lemonSpire2.Tooltips;
 /// </summary>
 public sealed class RichTextTooltip : Tooltip
 {
+    private static readonly PropertyInfo? TitleProperty =
+        typeof(HoverTip).GetProperty(nameof(HoverTip.Title));
+    private static readonly PropertyInfo? DescriptionProperty =
+        typeof(HoverTip).GetProperty(nameof(HoverTip.Description));
+
     protected override string TypeTag => "rt";
 
     public string? Title { get; set; }
     public required string Description { get; set; }
     public bool IsDebuff { get; set; }
-
+        
+    public override string Render()
+    {
+        return $"{Title}";
+    }
+    
     public override void Serialize(PacketWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
@@ -34,51 +43,24 @@ public sealed class RichTextTooltip : Tooltip
         IsDebuff = reader.ReadBool();
     }
 
-    public override Control? CreatePreview()
+    public override IHoverTip ToHoverTip()
     {
-        return BuildHoverTip(Title, Description, IsDebuff);
-    }
-
-    private static Control? BuildHoverTip(string? title, string description, bool isDebuff)
-    {
-        try
+        // Create HoverTip with empty constructor (record struct default)
+        var tip = new HoverTip
         {
-            var control = PreloadManager.Cache
-                .GetScene("res://scenes/ui/hover_tip.tscn")
-                .Instantiate<Control>();
+            IsDebuff = IsDebuff,
+            IsSmart = false,
+            IsInstanced = false,
+            Id = $"richtext:{Title ?? "untitled"}"
+        };
 
-            var titleLabel = control.GetNode<MegaLabel>("%Title");
-            if (title is null)
-                titleLabel.Visible = false;
-            else
-                titleLabel.SetTextAutoSize(title);
+        // Use reflection to set readonly properties on struct
+        // Must box first, then set, then unbox
+        object boxed = tip;
+        TitleProperty?.SetValue(boxed, Title);
+        DescriptionProperty?.SetValue(boxed, Description);
+        tip = (HoverTip)boxed;
 
-            control.GetNode<MegaRichTextLabel>("%Description").Text = description;
-            control.GetNode<TextureRect>("%Icon").Texture = null;
-
-            if (isDebuff)
-            {
-                var bg = control.GetNode<CanvasItem>("%Bg");
-                bg.Material = PreloadManager.Cache.GetMaterial("res://materials/ui/hover_tip_debuff.tres");
-            }
-
-            control.ResetSize();
-            SetSubtreeMouseIgnore(control);
-            return control;
-        }
-        catch (Exception ex)
-        {
-            MainFile.Logger.Error($"Failed to build rich text hover tip: {ex.Message}");
-            throw;
-        }
-    }
-
-    private static void SetSubtreeMouseIgnore(Node node)
-    {
-        if (node is Control c)
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        foreach (var child in node.GetChildren())
-            SetSubtreeMouseIgnore(child);
+        return tip;
     }
 }

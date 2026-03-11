@@ -1,35 +1,51 @@
-using Godot;
+using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
 namespace lemonSpire2.Tooltips;
 
-public abstract class Tooltip : IMeta
+/// <summary>
+///     Base class for serializable tooltips.
+///     Implementations should provide ToHoverTip() for UI rendering.
+/// </summary>
+public abstract class Tooltip
 {
-    private static int _nextId = 1;
+    private static int _nextRegistryId = 1;
     private static readonly Dictionary<int, WeakReference<Tooltip>> Registry = new();
+    
+    public static readonly int FontSize = 18;
 
     protected Tooltip()
     {
-        Id = _nextId++;
-        Registry[Id] = new WeakReference<Tooltip>(this);
+        RegistryId = _nextRegistryId++;
+        Registry[RegistryId] = new WeakReference<Tooltip>(this);
     }
 
     protected abstract string TypeTag { get; }
 
-    public int Id { get; }
+    /// <summary>
+    ///     Internal registry ID used for meta string lookup.
+    /// </summary>
+    public int RegistryId { get; }
 
+    public abstract string Render();
+    
     public abstract void Serialize(PacketWriter writer);
     public abstract void Deserialize(PacketReader reader);
 
-    public static Tooltip? TryResolve(int id)
+    /// <summary>
+    ///     Converts this tooltip to an IHoverTip for rendering by NHoverTipSet.
+    /// </summary>
+    public abstract IHoverTip ToHoverTip();
+
+    public static Tooltip? TryResolve(int registryId)
     {
-        if (!Registry.TryGetValue(id, out var weak)) return null;
+        if (!Registry.TryGetValue(registryId, out var weak)) return null;
 
         if (weak.TryGetTarget(out var tooltip))
             return tooltip;
 
-        // 懒清理：目标已被 GC
-        Registry.Remove(id);
+        Registry.Remove(registryId);
         return null;
     }
 
@@ -45,13 +61,9 @@ public abstract class Tooltip : IMeta
 
     public string ToMetaString()
     {
-        return $"{TypeTag}:{Id}";
+        return $"{TypeTag}:{RegistryId}";
     }
 
-    /// <summary>
-    ///     Parses a meta string and resolves the Tooltip from the weak reference registry.
-    ///     Format: "tag:id" (tag is ignored, only id is used)
-    /// </summary>
     public static Tooltip? FromMetaString(string meta)
     {
         var span = meta.AsSpan();
@@ -59,10 +71,6 @@ public abstract class Tooltip : IMeta
         if (colonIndex < 0) return null;
 
         var idSpan = span[(colonIndex + 1)..];
-        if (!int.TryParse(idSpan, out var id)) return null;
-
-        return TryResolve(id);
+        return !int.TryParse(idSpan, out var id) ? null : TryResolve(id);
     }
-
-    public abstract Control? CreatePreview();
 }

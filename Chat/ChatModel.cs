@@ -10,6 +10,7 @@ public class ChatModel
 
     public void AppendMessage(ChatMessage message)
     {
+        ArgumentNullException.ThrowIfNull(message);
         MainFile.Logger.Debug($"ChatModel.AppendMessage: segments={message.Segments.Count}");
         Messages.Add(message);
         OnMessageAppended?.Invoke(this, message);
