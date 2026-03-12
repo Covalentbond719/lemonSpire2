@@ -1,6 +1,7 @@
 using Godot;
 using lemonSpire2.SynergyIndicator.Models;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Powers;
 
 namespace lemonSpire2.SynergyIndicator.Ui;
 
@@ -17,6 +18,12 @@ public partial class IndicatorButton : Button
     private Label? EmojiLabel { get; set; }
     private TextureRect? IconTextureRect { get; set; }
     public IndicatorStatus Status { get; private set; }
+
+    private static readonly Dictionary<IndicatorType, Texture2D?> IconCache = new()
+    {
+        { IndicatorType.Vulnerable, PowerIcon<VulnerablePower>() },
+        { IndicatorType.Weak, PowerIcon<WeakPower>() },
+    };
 
     // emoji 映射
     private static readonly Dictionary<IndicatorType, string> Emojis = new()
@@ -49,7 +56,6 @@ public partial class IndicatorButton : Button
             SetupIcon(type);
         }
 
-        Pressed -= OnIndicatorClicked;
         Pressed += OnIndicatorClicked;
 
         // IndicatorHandler.SendMessage(type, status);
@@ -81,10 +87,9 @@ public partial class IndicatorButton : Button
     {
         if (disposing)
         {
-            EmojiLabel?.QueueFree();
-            IconTextureRect?.QueueFree();
+            if (IsInstanceValid(EmojiLabel)) EmojiLabel?.QueueFree();
+            if (IsInstanceValid(IconTextureRect)) IconTextureRect?.QueueFree();
         }
-
         base.Dispose(disposing);
     }
 
@@ -143,19 +148,8 @@ public partial class IndicatorButton : Button
     }
 
     private static Texture2D? GetIconForIndicatorType(IndicatorType type)
-    {
-        string? powerId = type switch
-        {
-            // TODO
-            _ => null
-        };
+        => IconCache.GetValueOrDefault(type);
 
-        if (powerId == null)
-        {
-            return null;
-        }
-
-        var resource = ModelDb.AllPowers.FirstOrDefault(p => p.Id.Entry == powerId);
-        return resource?.Icon;
-    }
+    private static Texture2D? PowerIcon<T>() where T : PowerModel
+        => ModelDb.AllPowers.FirstOrDefault(p => p is T)?.Icon;
 }

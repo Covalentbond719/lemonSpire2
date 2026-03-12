@@ -30,6 +30,13 @@ public class IndicatorManager
     /// 存储所有玩家的 UI 面板引用，使用 NetId 作为键
     /// </summary>
     private readonly Dictionary<ulong, IndicatorPanel> _panels = new();
+    private static readonly IReadOnlyList<IIndicatorProvider> Providers = new List<IIndicatorProvider>
+    {
+        new HandShakeIndicatorProvider(),
+        new VulnerableIndicatorProvider(),
+        new WeakIndicatorProvider(),
+        new StrangleIndicatorProvider()
+    };
 
     public void InitializeNetwork(INetGameService netService)
     {
@@ -145,9 +152,10 @@ public class IndicatorManager
             c.MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly);
 
         Instance.ClearPlayerIndicators(netId);
-        if (hasSynergy)
+        foreach (var provider in Providers)
         {
-            Instance.AddIndicator(netId, IndicatorType.HandShake, IndicatorStatus.WillUse);
+            if (provider.ShouldShow(cards))
+                Instance.AddIndicator(netId, provider.Type, IndicatorStatus.WillUse);
         }
 
         MainFile.Logger.Debug(
@@ -159,4 +167,5 @@ public class IndicatorManager
         foreach (var panel in _panels.Values)
             panel.ResetForNewTurn();
     }
+
 }
