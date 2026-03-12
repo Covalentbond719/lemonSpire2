@@ -1,9 +1,11 @@
 using Godot;
+using lemonSpire2.SynergyIndicator.Message;
 using lemonSpire2.SynergyIndicator.Models;
 using lemonSpire2.SynergyIndicator.Ui;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 
 namespace lemonSpire2.SynergyIndicator;
@@ -21,12 +23,19 @@ public class IndicatorManager
         _noticeSound = GD.Load<AudioStream>("res://lemonSpire2/synergy-notice.mp3");
     }
 
+    private IndicatorNetworkHandler? _networkHandler;
     private AudioStream? _noticeSound;
 
     /// <summary>
     /// 存储所有玩家的 UI 面板引用，使用 NetId 作为键
     /// </summary>
     private readonly Dictionary<ulong, IndicatorPanel> _panels = new();
+
+    public void InitializeNetwork(INetGameService netService)
+    {
+        _networkHandler = new IndicatorNetworkHandler(netService);
+    }
+
     public void ResetAllIndicators()
     {
         foreach (var panel in _panels.Values)
@@ -59,6 +68,9 @@ public class IndicatorManager
     {
         if (!_panels.TryGetValue(playerNetId, out var panel)) return;
         panel.ToggleStatus(type);
+
+        var newStatus = GetStatus(playerNetId, type);
+        _networkHandler?.SendStatusMessage(playerNetId, type, newStatus);
     }
 
     public IndicatorStatus GetStatus(ulong playerNetId, IndicatorType type)

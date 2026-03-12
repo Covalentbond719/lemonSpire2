@@ -35,6 +35,7 @@ public partial class MainFile : Node
         if (EnableSynergyIndicator)
         {
             harmony.CreateClassProcessor(typeof(SynergyIndicatorPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(SynergyIndicatorNetworkPatch)).Patch();
         }
 
         if (EnableStatsTracker)

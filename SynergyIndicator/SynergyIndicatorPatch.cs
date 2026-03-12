@@ -1,6 +1,9 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace lemonSpire2.SynergyIndicator;
 
@@ -47,5 +50,20 @@ public static class SynergyIndicatorPatch
     {
         ArgumentNullException.ThrowIfNull(__instance);
         IndicatorManager.UpdateSynergyStatus(__instance.Player);
+    }
+}
+
+[HarmonyPatchCategory("HandshakeIndicator")]
+[HarmonyPatch(typeof(NGlobalUi), "Initialize")]
+public static class SynergyIndicatorNetworkPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(NGlobalUi __instance, RunState runState)
+    {
+        var netService = RunManager.Instance.NetService;
+        if (!netService.Type.IsMultiplayer()) return;
+
+        IndicatorManager.Instance.InitializeNetwork(netService);
+        MainFile.Logger.Info("IndicatorManager network initialized");
     }
 }
