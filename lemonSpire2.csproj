@@ -66,8 +66,9 @@
         <Content Include="localization\**"/>
         <Content Include="mod_manifest.json"/>
         <Content Include="project.godot"/>
-        <Content Include="lemonSpire2\**"/>
+        <Content Include="lemonSpire2/**"/>
         <Content Include="README.md"/>
+        <Content Include="LICENSE"/>
     </ItemGroup>
 
     <ItemGroup>
