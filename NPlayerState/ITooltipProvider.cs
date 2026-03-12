@@ -1,7 +1,7 @@
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.HoverTips;
 
-namespace lemonSpire2.PlayerTooltip;
+namespace lemonSpire2.NPlayerState;
 
 /// <summary>
 ///     Provides tooltip content for multiplayer player state display.

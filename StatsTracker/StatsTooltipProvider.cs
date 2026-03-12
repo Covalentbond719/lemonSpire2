@@ -1,5 +1,5 @@
 using System.Reflection;
-using lemonSpire2.PlayerTooltip;
+using lemonSpire2.NPlayerState;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;

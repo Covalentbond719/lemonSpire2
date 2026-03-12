@@ -2,13 +2,14 @@ using System.Globalization;
 using Godot;
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
+using lemonSpire2.util;
 using MegaCrit.Sts2.Core.Localization;
 
 namespace lemonSpire2.Chat.Ui;
 
 /// <summary>
 ///     Chat panel with message display and input area.
-///     Supports expand/collapse via Tab key.
+///     Supports expand/collapse via Tab key and dragging.
 /// </summary>
 public sealed class ChatPanel : IDisposable
 {
@@ -40,6 +41,7 @@ public sealed class ChatPanel : IDisposable
     private StyleBoxFlat? _panelStyle;
     private StyleBoxFlat? _inputStyle;
     private readonly Control _tooltipParent;
+    private DraggableHelper? _draggable;
 
     public ChatPanel(ChatModel model, Action<IIntent> dispatch, IntentHandlerRegistry intentRegistry, Control tooltipParent)
     {
@@ -70,13 +72,9 @@ public sealed class ChatPanel : IDisposable
         _container = new ChatPanelContainer(this)
         {
             Name = "ChatPanel",
-            MouseFilter = Control.MouseFilterEnum.Ignore
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            AnchorsPreset = (int)Control.LayoutPreset.BottomLeft
         };
-
-        _container.AnchorLeft = 0;
-        _container.AnchorTop = 1;
-        _container.AnchorRight = 0;
-        _container.AnchorBottom = 1;
 
         _panelStyle = new StyleBoxFlat
         {
@@ -136,6 +134,17 @@ public sealed class ChatPanel : IDisposable
 
         _inputField.TextSubmitted += OnTextSubmitted;
         _inputContainer.AddChild(_inputField);
+
+        // 添加拖拽功能
+        _draggable = DraggableHelper.AttachTo(_container,
+            onDragStart: () => _container.MouseFilter = Control.MouseFilterEnum.Stop,
+            onDragEnd: () =>
+            {
+                if (!_isExpanded)
+                {
+                    _container.MouseFilter = Control.MouseFilterEnum.Ignore;
+                }
+            });
     }
 
     public Control? GetControl() => _container;
@@ -368,15 +377,18 @@ public sealed class ChatPanel : IDisposable
         var viewportSize = _container.GetViewportRect().Size;
         var chatWidth = viewportSize.X * 0.3f;
 
+        // 首次初始化时设置默认位置（底部锚点模式：Position.Y 是距底部的距离）
+        if (_container.Position == Vector2.Zero)
+        {
+            _container.Position = new Vector2(Margin, Margin);
+        }
+
+        float panelHeight;
         if (_isExpanded)
         {
-            var expandedHeight = viewportSize.Y * 0.5f;
-            _container.OffsetLeft = Margin;
-            _container.OffsetTop = -expandedHeight - Margin;
-            _container.OffsetRight = chatWidth;
-            _container.OffsetBottom = -Margin;
+            panelHeight = viewportSize.Y * 0.5f;
 
-            var msgHeight = expandedHeight - InputHeight;
+            var msgHeight = panelHeight - InputHeight;
             _messageBuffer.Size = new Vector2(chatWidth, msgHeight);
             _messageBuffer.Position = new Vector2(0, 0);
             _messageBuffer.MouseFilter = Control.MouseFilterEnum.Stop;
@@ -391,19 +403,17 @@ public sealed class ChatPanel : IDisposable
         }
         else
         {
-            var collapsedHeight = FontSize * CollapsedVisibleLines;
-            _container.OffsetLeft = Margin;
-            _container.OffsetTop = -collapsedHeight - Margin;
-            _container.OffsetRight = chatWidth;
-            _container.OffsetBottom = -Margin;
+            panelHeight = FontSize * CollapsedVisibleLines;
 
-            _messageBuffer.Size = new Vector2(chatWidth, collapsedHeight);
+            _messageBuffer.Size = new Vector2(chatWidth, panelHeight);
             _messageBuffer.Position = new Vector2(0, 0);
             _messageBuffer.MouseFilter = Control.MouseFilterEnum.Stop;
 
             _inputContainer!.Visible = false;
             _container.MouseFilter = Control.MouseFilterEnum.Ignore;
         }
+
+        _container.Size = new Vector2(chatWidth, panelHeight);
     }
 
     // ========== Message Display ==========

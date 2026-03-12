@@ -2,12 +2,15 @@ using Godot;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.Tooltips;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Relics;
+using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 
 namespace lemonSpire2.SendItem;
 
@@ -26,10 +29,18 @@ public static class ItemInputHandler
         if (enchantmentSegment != null)
             return enchantmentSegment;
 
+        // 检查是否是商店槽位
+        var merchantSegment = TryGetMerchantItem(node);
+        if (merchantSegment != null)
+            return merchantSegment;
+
         while (node != null)
         {
             switch (node)
             {
+                case NDeckHistoryEntry { Card: { } card }:
+                    return CreateCardSegment(card);
+
                 case NPower { Model: { } pm }:
                     return CreatePowerSegment(pm);
 
@@ -50,6 +61,34 @@ public static class ItemInputHandler
             }
 
             node = node.GetParent();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     尝试从商店槽位获取物品
+    /// </summary>
+    private static TooltipSegment? TryGetMerchantItem(Node? node)
+    {
+        if (node == null) return null;
+
+        // 向上查找 NMerchantSlot
+        var current = node;
+        while (current != null)
+        {
+            if (current is NMerchantSlot { Entry: { } entry })
+            {
+                return entry switch
+                {
+                    MerchantCardEntry { CreationResult.Card: { } card } => CreateCardSegment(card),
+                    MerchantPotionEntry { Model: { } potion } => CreatePotionSegment(potion),
+                    MerchantRelicEntry { Model: { } relic } => CreateRelicSegment(relic),
+                    _ => null
+                };
+            }
+
+            current = current.GetParent();
         }
 
         return null;

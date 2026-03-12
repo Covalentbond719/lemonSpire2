@@ -1,11 +1,11 @@
 using Godot;
 using lemonSpire2.SynergyIndicator.Message;
 using lemonSpire2.SynergyIndicator.Models;
-using lemonSpire2.SynergyIndicator.Ui;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
+using IndicatorPanel = lemonSpire2.SynergyIndicator.UI.IndicatorPanel;
 
 namespace lemonSpire2.SynergyIndicator;
 

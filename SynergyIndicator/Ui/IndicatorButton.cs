@@ -3,7 +3,7 @@ using lemonSpire2.SynergyIndicator.Models;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 
-namespace lemonSpire2.SynergyIndicator.Ui;
+namespace lemonSpire2.SynergyIndicator.UI;
 
 /// <summary>
 /// 单个指示器按钮，支持 emoji 和图标两种显示方式，响应点击事件并触发状态切换

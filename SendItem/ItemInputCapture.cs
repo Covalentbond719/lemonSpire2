@@ -15,6 +15,13 @@ namespace lemonSpire2.SendItem;
 /// </summary>
 public partial class ItemInputCapture : Control
 {
+    /// <summary>
+    ///     调试用：当 Alt+Click 找不到物品时，是否阻止事件传播
+    ///     设为 true 可以防止 Alt+Click 在商店等场景触发购买
+    ///     设为 false 允许其他 Mod 处理 Alt+Click
+    /// </summary>
+    public static bool BlockAltClickOnNoItem { get; set; } = true;
+
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
@@ -47,6 +54,8 @@ public partial class ItemInputCapture : Control
         if (hovered == null)
         {
             MainFile.Logger.Debug("No hovered control");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
             return;
         }
 
@@ -62,6 +71,8 @@ public partial class ItemInputCapture : Control
         if (segment == null)
         {
             MainFile.Logger.Debug("No item segment found");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
             return;
         }
 

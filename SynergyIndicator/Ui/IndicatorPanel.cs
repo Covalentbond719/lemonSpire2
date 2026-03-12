@@ -5,7 +5,7 @@ using lemonSpire2.SynergyIndicator.Models;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 
-namespace lemonSpire2.SynergyIndicator.Ui;
+namespace lemonSpire2.SynergyIndicator.UI;
 
 public class IndicatorClickedEventArgs : EventArgs
 {

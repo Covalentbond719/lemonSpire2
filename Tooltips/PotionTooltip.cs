@@ -47,7 +47,7 @@ public sealed class PotionTooltip : Tooltip
         var color = GetPotionRarityColor(model.Rarity);
         var iconPath = model.ImagePath;
 
-        return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title}[/color]";
+        return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title.GetFormattedText()}[/color]";
     }
 
     public override void Serialize(PacketWriter writer)
