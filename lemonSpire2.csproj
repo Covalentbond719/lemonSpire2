@@ -69,6 +69,8 @@
         <Content Include="lemonSpire2/**"/>
         <Content Include="README.md"/>
         <Content Include="LICENSE"/>
+        <Content Include="SynergyIndicator\UI\IndicatorButton.cs.uid" />
+        <Content Include="SynergyIndicator\UI\IndicatorPanel.cs.uid" />
     </ItemGroup>
 
     <ItemGroup>
