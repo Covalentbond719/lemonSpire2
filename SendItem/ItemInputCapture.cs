@@ -15,6 +15,13 @@ namespace lemonSpire2.SendItem;
 /// </summary>
 public partial class ItemInputCapture : Control
 {
+    /// <summary>
+    ///     调试用：当 Alt+Click 找不到物品时，是否阻止事件传播
+    ///     设为 true 可以防止 Alt+Click 在商店等场景触发购买
+    ///     设为 false 允许其他 Mod 处理 Alt+Click
+    /// </summary>
+    public static bool BlockAltClickOnNoItem { get; set; } = false;
+
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
@@ -32,11 +39,10 @@ public partial class ItemInputCapture : Control
         }
 
         // Alt+RightClick: 从当前显示的 HoverTip 发送
-        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true })
-        {
-            HandleAltRightClick();
-            return;
-        }
+        if (@event is InputEventMouseButton
+            {
+                Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true
+            }) HandleAltRightClick();
     }
 
     private void HandleAltLeftClick()
@@ -47,6 +53,8 @@ public partial class ItemInputCapture : Control
         if (hovered == null)
         {
             MainFile.Logger.Debug("No hovered control");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
             return;
         }
 
@@ -62,6 +70,8 @@ public partial class ItemInputCapture : Control
         if (segment == null)
         {
             MainFile.Logger.Debug("No item segment found");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
             return;
         }
 
@@ -140,7 +150,7 @@ public partial class ItemInputCapture : Control
             return null;
 
         // 收集所有文本 tooltip 的内容
-        var tips = new List<(string? Title, string Description, bool IsDebuff)>();
+        var tips = new List<(string? Title, string Description, bool IsDebuff, string? IconPath)>();
 
         foreach (var child in textContainer.GetChildren())
         {
@@ -148,43 +158,41 @@ public partial class ItemInputCapture : Control
 
             var titleLabel = tipControl.GetNodeOrNull<Label>("%Title");
             var descLabel = tipControl.GetNodeOrNull<RichTextLabel>("%Description");
+            var iconRect = tipControl.GetNodeOrNull<TextureRect>("%Icon");
 
             var title = titleLabel?.Text;
             var description = descLabel?.Text ?? "";
+            var iconPath = iconRect?.Texture?.ResourcePath;
 
             // 检查是否是 debuff（通过背景材质判断）
             var isDebuff = false;
             var bg = tipControl.GetNodeOrNull<CanvasItem>("%Bg");
             if (bg?.Material != null)
-            {
                 // debuff tooltip 使用特定材质
                 isDebuff = bg.Material.ResourcePath?.Contains("debuff", StringComparison.OrdinalIgnoreCase) == true;
-            }
 
             if (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(description))
-            {
-                tips.Add((string.IsNullOrEmpty(title) ? null : title, description, isDebuff));
-            }
+                tips.Add((string.IsNullOrEmpty(title) ? null : title, description, isDebuff, iconPath));
         }
 
         if (tips.Count == 0) return null;
 
         // 如果只有一个 tooltip，直接发送
-
         {
-            var (title, desc, isDebuff) = tips[0];
+            var (title, desc, isDebuff, iconPath) = tips[0];
             return new TooltipSegment
             {
                 Tooltip = new RichTextTooltip
                 {
                     Title = title,
                     Description = desc,
-                    IsDebuff = isDebuff
+                    IsDebuff = isDebuff,
+                    IconPath = iconPath
                 },
                 DisplayName = title ?? "Tooltip"
             };
         }
-        
+
         // TODO: 如果有多个 tooltip，需要重构方案来正确发送，目前所有都只能 Send 一个 Segment，无法表达多个 tooltip 的情况
     }
 
@@ -197,13 +205,12 @@ public partial class ItemInputCapture : Control
             return;
         }
 
-        var msg = new ChatMessage
-        {
-            SenderId = 0, // Will be filled by ChatStore
-            Segments = new List<IMsgSegment> { segment }
-        };
 
-        store.Dispatch(new IntentSubmit { Message = msg });
+        store.Dispatch(new IntentSendSegments
+        {
+            receiverId = 0,
+            Segments = [segment]
+        });
     }
 
     private static bool IsInsideChatPanel(Control? control)

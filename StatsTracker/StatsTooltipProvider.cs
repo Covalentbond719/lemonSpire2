@@ -1,7 +1,8 @@
 using System.Reflection;
-using lemonSpire2.PlayerTooltip;
+using lemonSpire2.PlayerStateEx;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.HoverTips;
+using MegaCrit.Sts2.Core.Localization;
 
 namespace lemonSpire2.StatsTracker;
 
@@ -21,10 +22,7 @@ public class StatsTooltipProvider : ITooltipProvider
 
     public bool ShouldShow(Player player)
     {
-        if (player == null)
-        {
-            return false;
-        }
+        if (player == null) return false;
 
         var stats = StatsTrackerManager.Instance.GetStats(player.NetId);
         return stats != null && !stats.IsEmpty;
@@ -32,19 +30,13 @@ public class StatsTooltipProvider : ITooltipProvider
 
     public HoverTip? CreateHoverTip(Player player)
     {
-        if (player == null)
-        {
-            return null;
-        }
+        if (player == null) return null;
 
         var stats = StatsTrackerManager.Instance.GetStats(player.NetId);
-        if (stats == null || stats.IsEmpty)
-        {
-            return null;
-        }
+        if (stats == null || stats.IsEmpty) return null;
 
-        var title = ModLocalization.Get("stats.title", "Stats");
-        
+        var title = new LocString("gameplay_ui", "LEMONSPIRE.stats.title").GetFormattedText();
+
         // Sorted by key to ensure consistent order, group by prefix (e.g. stats.combat, stats.total)
         var sortedStats = stats.GetAll()
             .OrderBy(kv => kv.Key)
@@ -64,16 +56,17 @@ public class StatsTooltipProvider : ITooltipProvider
                 if (prefix != currentPrefix)
                 {
                     currentPrefix = prefix;
-                    var groupTitle = ModLocalization.Get(prefix, prefix);
+                    var groupTitle = new LocString("gameplay_ui", $"LEMONSPIRE.{prefix}").GetFormattedText();
                     lines.Add($"[{groupTitle}]");
                 }
-                
-                var localizedName = ModLocalization.Get(key, key);
+
+                var localizedName = new LocString("gameplay_ui", $"LEMONSPIRE.{key}").GetFormattedText();
                 lines.Add($"  {localizedName}: {(int)kv.Value}");
             }
             else
             {
-                lines.Add($"{ModLocalization.Get(key, key)}: {(int)kv.Value}");
+                var localizedName = new LocString("gameplay_ui", $"LEMONSPIRE.{key}").GetFormattedText();
+                lines.Add($"{localizedName}: {(int)kv.Value}");
             }
         }
 
