@@ -188,6 +188,7 @@ public class ShopProvider : IPlayerPanelProvider
         var nRelic = holder.Relic;
         if (nRelic != null)
         {
+            nRelic.PivotOffset = nRelic.Size * 0.5f;  // 关键：设置中心点。见 Sts2...NPotionHolder.AddPotion
             nRelic.Position = Vector2.Zero; // 关键：重置位置，否则会出现偏移
             nRelic.Scale = Vector2.One * ItemScale;
             holder.CustomMinimumSize = nRelic.Size * ItemScale;

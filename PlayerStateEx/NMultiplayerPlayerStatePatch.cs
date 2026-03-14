@@ -168,7 +168,6 @@ public static class NMultiplayerPlayerStatePatch
     private static void ShowOverlayPanel(NMultiplayerPlayerState instance)
     {
         var player = instance.Player;
-        if (player == null) return;
 
         var playerId = player.NetId;
 

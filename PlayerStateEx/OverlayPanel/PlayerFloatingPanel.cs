@@ -20,6 +20,7 @@ namespace lemonSpire2.PlayerStateEx.OverlayPanel;
 public partial class PlayerOverlayPanel : Control
 {
     private const float MinContentHeight = 80f;
+    private const float PanelWidth = 400f;
     private readonly Dictionary<string, Control> _providerContents = [];
     private readonly List<Action> _unsubscribeActions = [];
     private readonly HashSet<string> _visibleProviders = [];
@@ -62,7 +63,7 @@ public partial class PlayerOverlayPanel : Control
         {
             Name = "Panel",
             AnchorsPreset = (int)LayoutPreset.TopLeft,
-            CustomMinimumSize = new Vector2(280, 0)
+            CustomMinimumSize = new Vector2(PanelWidth, MinContentHeight)
         };
 
         var style = new StyleBoxFlat
@@ -99,7 +100,7 @@ public partial class PlayerOverlayPanel : Control
         separator.AddThemeColorOverride("separator_color", new Color(0.3f, 0.3f, 0.4f));
         _mainContainer.AddChild(separator);
 
-        // 始终使用 ScrollContainer
+        // 始终使用 ScrollContainer，不设置 SizeFlagsVertical = ExpandFill
         _scrollContainer = new ScrollContainer
         {
             Name = "ScrollContainer",
@@ -120,18 +121,27 @@ public partial class PlayerOverlayPanel : Control
 
     /// <summary>
     ///     更新面板高度
-    ///     始终使用 ScrollContainer，设置合理的 CustomMinimumSize
+    ///     动态调整 ScrollContainer 的最低高度，并强制清空 Size 让 Godot 自动重新排版
     /// </summary>
     private void UpdatePanelHeight()
     {
-        if (_scrollContainer == null || _contentContainer == null) return;
+        if (_scrollContainer == null || _contentContainer == null || _panel == null || _mainContainer == null) return;
 
-        var contentHeight = _contentContainer.Size.Y;
+        // 使用 GetMinimumSize() 获取实时所需高度，而非 Size.Y（可能是旧的）
+        var contentHeight = _contentContainer.GetMinimumSize().Y;
         var maxHeight = GetMaxContentHeight();
 
-        // 高度范围：[MinContentHeight, maxHeight]
-        var displayHeight = Mathf.Clamp(contentHeight, MinContentHeight, maxHeight);
-        _scrollContainer.CustomMinimumSize = new Vector2(0, displayHeight);
+        // 钳制目标高度：[MinContentHeight, maxHeight]
+        var targetHeight = Mathf.Clamp(contentHeight, MinContentHeight, maxHeight);
+
+        // 只控制 ScrollContainer 的 CustomMinimumSize
+        _scrollContainer.CustomMinimumSize = new Vector2(0, targetHeight);
+
+        // 核心技巧：重置所有父级容器的 Size，让 Godot 布局引擎重新计算
+        // 这样容器才能在内容减少时自动缩小
+        _scrollContainer.Size = Vector2.Zero;
+        _mainContainer.Size = Vector2.Zero;
+        _panel.Size = Vector2.Zero;
     }
 
     private float GetMaxContentHeight()
