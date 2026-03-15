@@ -1,9 +1,10 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
-using Logger = MegaCrit.Sts2.Core.Logging.Logger;
-using LogType = MegaCrit.Sts2.Core.Logging.LogType;
+using MegaCrit.Sts2.Core.Runs;
 
 namespace lemonSpire2.SynergyIndicator;
 
@@ -19,14 +20,11 @@ public static class SynergyIndicatorPatch
         _eventHandlers =
             new();
 
-    internal static Logger Log { get; } = new("lemon.indicator", LogType.Network);
-
     [HarmonyPostfix]
     [HarmonyPatch("_Ready")]
     public static void ReadyPostfix(NMultiplayerPlayerState __instance)
     {
         ArgumentNullException.ThrowIfNull(__instance);
-        Log.Debug($"ReadyPostfix: creating panel for player {__instance.Player?.NetId}");
         IndicatorManager.Instance.CreatePanel(__instance);
     }
 
@@ -37,17 +35,9 @@ public static class SynergyIndicatorPatch
         ArgumentNullException.ThrowIfNull(__instance);
         IndicatorManager.UpdateSynergyStatus(__instance.Player);
 
-        if (!LocalContext.IsMe(__instance.Player))
-        {
-            Log.Debug($"OnCombatSetUpPostfix: skipping non-local player {__instance.Player?.NetId}");
-            return;
-        }
+        if (!LocalContext.IsMe(__instance.Player)) return;
 
-        if (__instance.Player.PlayerCombatState == null)
-        {
-            Log.Debug("OnCombatSetUpPostfix: PlayerCombatState is null");
-            return;
-        }
+        if (__instance.Player.PlayerCombatState == null) return;
 
         // 创建事件处理程序并保存引用，以便后续取消订阅
         Action<CardModel> cardAddedHandler = _ => IndicatorManager.UpdateSynergyStatus(__instance.Player);
@@ -57,7 +47,6 @@ public static class SynergyIndicatorPatch
         __instance.Player.PlayerCombatState.Hand.CardRemoved += cardRemovedHandler;
 
         _eventHandlers[__instance] = (cardAddedHandler, cardRemovedHandler);
-        Log.Debug($"OnCombatSetUpPostfix: registered event handlers for player {__instance.Player?.NetId}");
     }
 
     [HarmonyPostfix]
@@ -87,7 +76,21 @@ public static class SynergyIndicatorPatch
             {
                 __instance.Player.PlayerCombatState.Hand.CardAdded -= handlers.CardAdded;
                 __instance.Player.PlayerCombatState.Hand.CardRemoved -= handlers.CardRemoved;
-                Log.Debug($"ExitTreePrefix: unregistered event handlers for player {__instance.Player?.NetId}");
             }
+    }
+}
+
+[HarmonyPatchCategory("HandshakeIndicator")]
+[HarmonyPatch(typeof(NGlobalUi), "Initialize")]
+public static class SynergyIndicatorNetworkPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(NGlobalUi __instance, RunState runState)
+    {
+        var netService = RunManager.Instance.NetService;
+        if (!netService.Type.IsMultiplayer()) return;
+
+        IndicatorManager.Instance.InitializeNetwork(netService);
+        MainFile.Logger.Info("IndicatorManager network initialized");
     }
 }

@@ -6,7 +6,6 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using IndicatorPanel = lemonSpire2.SynergyIndicator.Ui.IndicatorPanel;
-using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SynergyIndicator;
 
@@ -39,15 +38,7 @@ public sealed class IndicatorManager : IDisposable
         _noticeSound = GD.Load<AudioStream>("res://lemonSpire2/synergy-notice.mp3");
     }
 
-    private static Logger Log => SynergyIndicatorPatch.Log;
-
     public static IndicatorManager Instance => _instance ??= new IndicatorManager();
-
-    public void Dispose()
-    {
-        _noticeSound?.Dispose();
-        _networkHandler?.Dispose();
-    }
 
     public void InitializeNetwork(INetGameService netService)
     {
@@ -65,7 +56,7 @@ public sealed class IndicatorManager : IDisposable
         if (_panels.TryGetValue(playerNetId, out var panel)) panel.Clear();
     }
 
-    public void AddIndicator(ulong playerNetId, IndicatorType type, IndicatorStatus status)
+    private void AddIndicator(ulong playerNetId, IndicatorType type, IndicatorStatus status)
     {
         if (!_panels.TryGetValue(playerNetId, out var panel)) return;
         panel.AddIndicator(type, status);
@@ -76,7 +67,7 @@ public sealed class IndicatorManager : IDisposable
         if (_panels.TryGetValue(playerNetId, out var panel)) panel.SetStatus(type, status);
     }
 
-    public void ToggleStatus(ulong playerNetId, IndicatorType type)
+    private void ToggleStatus(ulong playerNetId, IndicatorType type)
     {
         if (!_panels.TryGetValue(playerNetId, out var panel)) return;
         panel.ToggleStatus(type);
@@ -85,7 +76,7 @@ public sealed class IndicatorManager : IDisposable
         _networkHandler?.SendStatusMessage(playerNetId, type, newStatus);
     }
 
-    public IndicatorStatus GetStatus(ulong playerNetId, IndicatorType type)
+    private IndicatorStatus GetStatus(ulong playerNetId, IndicatorType type)
     {
         return _panels.TryGetValue(playerNetId, out var panel)
             ? panel.GetStatus(type)
@@ -132,22 +123,65 @@ public sealed class IndicatorManager : IDisposable
         return result;
     }
 
+    /// <summary>
+    ///     差异更新玩家指示器：只添加新出现的，移除不再需要的
+    /// </summary>
     public static void UpdateSynergyStatus(Player player)
     {
         ArgumentNullException.ThrowIfNull(player);
         var netId = player.NetId;
         if (player.PlayerCombatState?.Hand.Cards == null) return;
 
-        var cards = player.PlayerCombatState.Hand.Cards;
-        var hasSynergy = cards.Any(c =>
-            c.MultiplayerConstraint == CardMultiplayerConstraint.MultiplayerOnly);
+        var shouldShowTypes = PlayerExpectedTypes(player.PlayerCombatState);
 
-        Instance.ClearPlayerIndicators(netId);
+        var currentTypes = PlayerCurrentTypes(player);
+
+        UpdateIndicator(shouldShowTypes, currentTypes, netId);
+    }
+
+    /// <summary>
+    ///     移除指定玩家的特定指示器
+    /// </summary>
+    private void RemoveIndicator(ulong playerNetId, IndicatorType type)
+    {
+        if (_panels.TryGetValue(playerNetId, out var panel))
+            panel.RemoveIndicator(type);
+    }
+
+    private static HashSet<IndicatorType> PlayerExpectedTypes(PlayerCombatState state)
+    {
+        var cards = state.Hand.Cards;
+        var expectedTypes = new HashSet<IndicatorType>();
         foreach (var provider in Providers)
             if (provider.ShouldShow(cards))
-                Instance.AddIndicator(netId, provider.Type, IndicatorStatus.WillUse);
+                expectedTypes.Add(provider.Type);
+        return expectedTypes;
+    }
 
-        Log.Debug(
-            $"Updated synergy status for player {netId}: {(hasSynergy ? "Has synergy cards" : "No synergy cards")}");
+    private static HashSet<IndicatorType> PlayerCurrentTypes(Player player)
+    {
+        return Instance._panels.TryGetValue(player.NetId, out var panel)
+            ? [.. panel.GetIndicatorTypes()]
+            : [];
+    }
+
+    private static void UpdateIndicator(HashSet<IndicatorType> shouldShowTypes, HashSet<IndicatorType> currentTypes,
+        ulong netId)
+    {
+        foreach (var type in shouldShowTypes.Where(type => !currentTypes.Contains(type)))
+        {
+            Instance.AddIndicator(netId, type, IndicatorStatus.WillUse);
+        }
+
+        foreach (var type in currentTypes.Where(type => !shouldShowTypes.Contains(type)))
+        {
+            Instance.RemoveIndicator(netId, type);
+        }
+    }
+
+    public void Dispose()
+    {
+        _noticeSound?.Dispose();
+        _networkHandler?.Dispose();
     }
 }

@@ -3,9 +3,14 @@ using Godot;
 using lemonSpire2.SynergyIndicator.Models;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
-using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SynergyIndicator.Ui;
+
+public class IndicatorClickedEventArgs : EventArgs
+{
+    public ulong PlayerNetId { get; init; }
+    public IndicatorType IndicatorType { get; init; }
+}
 
 /// <summary>
 ///     指示器主面板容器，负责显示和管理所有玩家的指示器图标
@@ -26,8 +31,6 @@ public partial class IndicatorPanel : HBoxContainer
         PlayerNetId = playerNetId;
         IsInteractive = isInteractive;
     }
-
-    private static Logger Log => SynergyIndicatorPatch.Log;
 
     public ulong PlayerNetId { get; }
 
@@ -52,7 +55,7 @@ public partial class IndicatorPanel : HBoxContainer
 
         topContainer.AddChild(panel);
         panel.MoveToFront();
-        Log.Debug($"CreateForPlayer: netId={player.Player.NetId} isInteractive={isInteractive}");
+        MainFile.Logger.Debug($"CreateForPlayer: netId={player.Player.NetId} isInteractive={isInteractive}");
 
         var topContainerParent = topContainer.GetParent();
         if (topContainerParent != null)
@@ -70,11 +73,22 @@ public partial class IndicatorPanel : HBoxContainer
 
         var button = new IndicatorButton();
         button.Setup(type, initialStatus, IsInteractive);
-        button.PlayFlashAnimation();
         button.MouseFilter = IsInteractive ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
         AddChild(button);
         button.IndicatorClicked += OnIndicatorClicked;
         _buttons[type] = button;
+    }
+
+    /// <summary>
+    ///     移除指定类型的指示器按钮
+    /// </summary>
+    public void RemoveIndicator(IndicatorType type)
+    {
+        if (!_buttons.TryGetValue(type, out var button)) return;
+
+        RemoveChild(button);
+        button.QueueFree();
+        _buttons.Remove(type);
     }
 
     /// <summary>
@@ -133,6 +147,14 @@ public partial class IndicatorPanel : HBoxContainer
         return _buttons.ContainsKey(type);
     }
 
+    /// <summary>
+    ///     获取当前显示的所有指示器类型
+    /// </summary>
+    public IEnumerable<IndicatorType> GetIndicatorTypes()
+    {
+        return _buttons.Keys;
+    }
+
     public IndicatorButton? GetButton(IndicatorType type)
     {
         return _buttons.GetValueOrDefault(type);
@@ -148,7 +170,8 @@ public partial class IndicatorPanel : HBoxContainer
 
     private void OnIndicatorClicked(IndicatorType type)
     {
-        Log.Debug($"IndicatorClicked: panelNetId={PlayerNetId} type={type} localNetId={LocalContext.NetId}");
+        MainFile.Logger.Debug(
+            $"IndicatorClicked: panelNetId={PlayerNetId} type={type} localNetId={LocalContext.NetId}");
         IndicatorClicked?.Invoke(this, new IndicatorClickedEventArgs
         {
             PlayerNetId = PlayerNetId,
