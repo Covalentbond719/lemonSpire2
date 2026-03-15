@@ -1,6 +1,5 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Runs;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SyncReward;

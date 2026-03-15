@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-
+using System.Collections.ObjectModel;
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SyncReward;
@@ -10,23 +10,23 @@ namespace lemonSpire2.SyncReward;
 /// </summary>
 public class CardRewardManager
 {
-    private static Logger Log => CardRewardNetworkHandler.Log;
-
-    /// <summary>
-    ///     玩家 NetId -> 奖励组列表
-    /// </summary>
-    private readonly ConcurrentDictionary<ulong, List<CardRewardGroup>> _playerRewards = new();
-
     /// <summary>
     ///     每个玩家最多保留的奖励组数量
     /// </summary>
     private const int MaxGroupsPerPlayer = 5;
 
+    /// <summary>
+    ///     玩家 NetId -> 奖励组列表
+    /// </summary>
+    private readonly ConcurrentDictionary<ulong, Collection<CardRewardGroup>> _playerRewards = new();
+
     private CardRewardManager()
     {
     }
 
-    public static CardRewardManager Instance { get; private set; } = new();
+    private static Logger Log => CardRewardNetworkHandler.Log;
+
+    public static CardRewardManager Instance { get; } = new();
 
     /// <summary>
     ///     奖励更新事件，参数为更新的玩家 NetId
@@ -61,10 +61,10 @@ public class CardRewardManager
     /// <summary>
     ///     获取玩家的奖励组（排除被盗牌归还）
     /// </summary>
-    public List<CardRewardGroup> GetGroups(ulong playerNetId)
+    public Collection<CardRewardGroup> GetGroups(ulong playerNetId)
     {
         if (!_playerRewards.TryGetValue(playerNetId, out var groups)) return [];
-        return groups.Where(g => g.Source != CardRewardSourceType.StolenBack).ToList();
+        return groups;
     }
 
     /// <summary>

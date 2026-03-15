@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -13,7 +12,6 @@ namespace lemonSpire2.StatsTracker;
 public class StatsTrackerManager
 {
     private static StatsTrackerManager? _instance;
-    internal static Logger Log { get; } = new("lemon.stats", LogType.Actions);
 
     private readonly Dictionary<ulong, StatsValues> _playerStats = new();
     private readonly HashSet<int> _processedHashes = new();
@@ -21,6 +19,8 @@ public class StatsTrackerManager
     private StatsTrackerManager()
     {
     }
+
+    internal static Logger Log { get; } = new("lemon.stats", LogType.Actions);
 
     public static StatsTrackerManager Instance => _instance ??= new StatsTrackerManager();
 

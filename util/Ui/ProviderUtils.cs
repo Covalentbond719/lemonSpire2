@@ -4,7 +4,6 @@ using lemonSpire2.Chat;
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
 using MegaCrit.Sts2.Core.Nodes.Potions;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.util.Ui;

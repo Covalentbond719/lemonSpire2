@@ -10,7 +10,6 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.PlayerStateEx.PanelProvider;
@@ -23,6 +22,35 @@ namespace lemonSpire2.PlayerStateEx.PanelProvider;
 public class HandCardProvider : IPlayerPanelProvider
 {
     private static Logger Log => PlayerPanelRegistry.Log;
+
+    #region Event Handlers
+
+    private static void OnEntryClicked(CardModel card, Player player)
+    {
+        Log.Debug($"OnEntryClicked: {card.Title}, Alt={Input.IsKeyPressed(Key.Alt)}");
+
+        // 每次点击时重新获取手牌列表，确保是最新的
+        var cards = player.PlayerCombatState?.Hand.Cards.ToList() ?? new List<CardModel>();
+
+        if (Input.IsKeyPressed(Key.Alt))
+        {
+            // Alt+Click: 发送卡牌到聊天
+            var segment = new TooltipSegment
+            {
+                Tooltip = CardTooltip.FromModel(card)
+            };
+
+            ProviderUtils.SendToChat(segment);
+        }
+        else
+        {
+            // 普通点击: 打开卡牌详情界面
+            var index = cards.IndexOf(card);
+            if (index >= 0) NGame.Instance?.GetInspectCardScreen().Open(cards, index);
+        }
+    }
+
+    #endregion
 
     #region IPlayerPanelProvider Implementation
 
@@ -115,35 +143,6 @@ public class HandCardProvider : IPlayerPanelProvider
     {
         ArgumentNullException.ThrowIfNull(content);
         ProviderUtils.ClearChildren(content);
-    }
-
-    #endregion
-
-    #region Event Handlers
-
-    private static void OnEntryClicked(CardModel card, Player player)
-    {
-        Log.Debug($"OnEntryClicked: {card.Title}, Alt={Input.IsKeyPressed(Key.Alt)}");
-
-        // 每次点击时重新获取手牌列表，确保是最新的
-        var cards = player.PlayerCombatState?.Hand.Cards.ToList() ?? new List<CardModel>();
-
-        if (Input.IsKeyPressed(Key.Alt))
-        {
-            // Alt+Click: 发送卡牌到聊天
-            var segment = new TooltipSegment
-            {
-                Tooltip = CardTooltip.FromModel(card)
-            };
-
-            ProviderUtils.SendToChat(segment);
-        }
-        else
-        {
-            // 普通点击: 打开卡牌详情界面
-            var index = cards.IndexOf(card);
-            if (index >= 0) NGame.Instance?.GetInspectCardScreen().Open(cards, index);
-        }
     }
 
     #endregion

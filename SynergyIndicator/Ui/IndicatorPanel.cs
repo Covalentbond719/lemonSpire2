@@ -3,7 +3,6 @@ using Godot;
 using lemonSpire2.SynergyIndicator.Models;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SynergyIndicator.Ui;
@@ -13,7 +12,6 @@ namespace lemonSpire2.SynergyIndicator.Ui;
 /// </summary>
 public partial class IndicatorPanel : HBoxContainer
 {
-    private static Logger Log => SynergyIndicatorPatch.Log;
     private static readonly FieldInfo? TopContainerField =
         typeof(NMultiplayerPlayerState).GetField("_topContainer", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -28,6 +26,8 @@ public partial class IndicatorPanel : HBoxContainer
         PlayerNetId = playerNetId;
         IsInteractive = isInteractive;
     }
+
+    private static Logger Log => SynergyIndicatorPatch.Log;
 
     public ulong PlayerNetId { get; }
 

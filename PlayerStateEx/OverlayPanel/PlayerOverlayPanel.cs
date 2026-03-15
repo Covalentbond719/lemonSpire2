@@ -1,6 +1,5 @@
-using System.Numerics;
 using Godot;
-using lemonSpire2.PlayerStateEx.PanelProvider;
+using lemonSpire2.SyncReward;
 using lemonSpire2.SyncShop;
 using lemonSpire2.util.Ui;
 using MegaCrit.Sts2.Core.Combat;
@@ -8,10 +7,8 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.Core.Runs;
-using lemonSpire2.SyncReward;
 using DraggableTitleBar = lemonSpire2.util.Ui.DraggableTitleBar;
 using ViewportResizeNotifier = lemonSpire2.util.Ui.ViewportResizeNotifier;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using Vector2 = Godot.Vector2;
 
@@ -24,22 +21,22 @@ namespace lemonSpire2.PlayerStateEx.OverlayPanel;
 /// </summary>
 public partial class PlayerOverlayPanel : Control
 {
-    private static Logger Log => PlayerPanelRegistry.Log;
     private const float MinContentHeight = 80f;
     private const float PanelWidth = 280f;
     private readonly Dictionary<string, Control> _providerContents = [];
     private readonly List<Action> _unsubscribeActions = [];
 
-    private Player? _player;
-
     private VBoxContainer _contentContainer = null!;
     private DraggableTitleBar _header = null!;
     private Label _headerTitle = null!;
     private VBoxContainer _mainContainer = null!;
-    private PanelContainer _panel = null!;
-    private ScrollContainer _scrollContainer = null!;
 
     private bool _needsRefresh;
+    private PanelContainer _panel = null!;
+
+    private Player? _player;
+    private ScrollContainer _scrollContainer = null!;
+    private static Logger Log => PlayerPanelRegistry.Log;
 
     public override void _Ready()
     {
@@ -132,7 +129,7 @@ public partial class PlayerOverlayPanel : Control
         var maxHeight = GetMaxContentHeight();
         var targetHeight = Mathf.Clamp(contentHeight, MinContentHeight, maxHeight);
 
-        _contentContainer.Size = Vector2.Zero;
+        _mainContainer.Size = Vector2.Zero;
         _scrollContainer.CustomMinimumSize = new Vector2(PanelWidth, targetHeight);
     }
 

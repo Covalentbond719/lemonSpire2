@@ -1,7 +1,7 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
+using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Runs;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SyncReward;
@@ -11,7 +11,7 @@ namespace lemonSpire2.SyncReward;
 ///     在 NGlobalUi.Initialize 时初始化网络处理器
 /// </summary>
 [HarmonyPatchCategory("CardRewardSync")]
-[HarmonyPatch(typeof(MegaCrit.Sts2.Core.Nodes.CommonUi.NGlobalUi), "Initialize")]
+[HarmonyPatch(typeof(NGlobalUi), "Initialize")]
 public static class CardRewardNetworkInitPatch
 {
     private static Logger Log => CardRewardNetworkHandler.Log;

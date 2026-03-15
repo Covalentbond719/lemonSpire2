@@ -14,7 +14,6 @@ using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.PlayerStateEx.PanelProvider;
@@ -28,9 +27,9 @@ namespace lemonSpire2.PlayerStateEx.PanelProvider;
 /// </summary>
 public class ShopProvider : IPlayerPanelProvider
 {
-    private static Logger Log => PlayerPanelRegistry.Log;
     private const int ItemsPerRow = 3;
     private const string GoldIconPath = "res://images/packed/sprite_fonts/gold_icon.png";
+    private static Logger Log => PlayerPanelRegistry.Log;
 
     #region IPlayerPanelProvider Implementation
 
@@ -96,7 +95,8 @@ public class ShopProvider : IPlayerPanelProvider
         if (potions.Count > 0)
             AddItemGrid(container, player, potions, AddPotionItem);
 
-        Log.Debug($"Updated content for player {player.NetId}: {cards.Count} cards, {relics.Count} relics, {potions.Count} potions");
+        Log.Debug(
+            $"Updated content for player {player.NetId}: {cards.Count} cards, {relics.Count} relics, {potions.Count} potions");
     }
 
     public Action SubscribeEvents(Player player, Action onUpdate)
@@ -291,7 +291,6 @@ public class ShopProvider : IPlayerPanelProvider
     {
         Label priceLabel;
         if (centered)
-        {
             priceLabel = new Label
             {
                 Text = $"{entry.Cost}g",
@@ -299,16 +298,13 @@ public class ShopProvider : IPlayerPanelProvider
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
-        }
         else
-        {
             priceLabel = new Label
             {
                 Text = $"{entry.Cost}g",
                 CustomMinimumSize = new Vector2(36, 0),
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
-        }
 
         if (player.Gold < entry.Cost)
             priceLabel.AddThemeColorOverride("font_color", StsColors.red);

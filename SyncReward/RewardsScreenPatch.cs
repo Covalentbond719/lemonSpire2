@@ -1,9 +1,9 @@
+using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Rewards;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SyncReward;
@@ -22,6 +22,7 @@ public static class RewardsScreenPatch
     [HarmonyPatch("SetRewards")]
     public static void SetRewardsPostfix(NRewardsScreen __instance, IEnumerable<Reward> rewards)
     {
+        ArgumentNullException.ThrowIfNull(rewards);
         ArgumentNullException.ThrowIfNull(__instance);
 
         if (LocalContext.NetId == null)
@@ -31,24 +32,23 @@ public static class RewardsScreenPatch
         }
 
         var playerNetId = LocalContext.NetId.Value;
-        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var groupIndex = 0;
 
         foreach (var reward in rewards)
-        {
             switch (reward)
             {
-                case MegaCrit.Sts2.Core.Rewards.CardReward cardReward:
+                case CardReward cardReward:
                     ProcessCardReward(cardReward, playerNetId, timestamp, ref groupIndex);
                     break;
                 case SpecialCardReward specialReward:
                     ProcessSpecialCardReward(specialReward, playerNetId, timestamp, ref groupIndex);
                     break;
             }
-        }
     }
 
-    private static void ProcessCardReward(MegaCrit.Sts2.Core.Rewards.CardReward cardReward, ulong playerNetId, string timestamp, ref int groupIndex)
+    private static void ProcessCardReward(CardReward cardReward, ulong playerNetId, long timestamp,
+        ref int groupIndex)
     {
         var cards = cardReward.Cards.ToList();
         if (cards.Count == 0) return;
@@ -57,24 +57,28 @@ public static class RewardsScreenPatch
         {
             GroupId = $"{timestamp}_{groupIndex++}",
             Source = CardRewardSourceType.Normal,
-            Cards = cards.Select(c => new CardEntry
-            {
-                ModelId = c.Id.Entry,
-                UpgradeLevel = c.CurrentUpgradeLevel
-            }).ToList()
+            Cards =
+            [
+                .. cards.Select(c => new CardEntry
+                {
+                    ModelId = c.Id.Entry,
+                    UpgradeLevel = c.CurrentUpgradeLevel
+                })
+            ]
         };
 
         CardRewardSynchronizer.BroadcastCardReward(group);
         Log.Debug($"Captured CardReward with {cards.Count} cards");
     }
 
-    private static void ProcessSpecialCardReward(SpecialCardReward specialReward, ulong playerNetId, string timestamp, ref int groupIndex)
+    private static void ProcessSpecialCardReward(SpecialCardReward specialReward, ulong playerNetId, long timestamp,
+        ref int groupIndex)
     {
         // 使用反射获取 _card 和 _customDescriptionEncounterSourceId
         var cardField = typeof(SpecialCardReward).GetField("_card",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance);
         var encounterSourceField = typeof(SpecialCardReward).GetField("_customDescriptionEncounterSourceId",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            BindingFlags.NonPublic | BindingFlags.Instance);
 
         var card = cardField?.GetValue(specialReward) as CardModel;
         if (card == null)
@@ -84,15 +88,13 @@ public static class RewardsScreenPatch
         }
 
         var encounterSourceIdObj = encounterSourceField?.GetValue(specialReward);
-        ModelId? encounterSourceId = encounterSourceIdObj != null ? (ModelId)encounterSourceIdObj : null;
+        var encounterSourceId = encounterSourceIdObj != null ? (ModelId)encounterSourceIdObj : null;
 
         // 判断是否是盗牌归还
-        var isStolenBack = IsStolenBackEncounter(encounterSourceId);
-
         var group = new CardRewardGroup
         {
             GroupId = $"{timestamp}_{groupIndex++}",
-            Source = isStolenBack ? CardRewardSourceType.StolenBack : CardRewardSourceType.Special,
+            Source = CardRewardSourceType.Special,
             Cards =
             [
                 new CardEntry
@@ -104,24 +106,6 @@ public static class RewardsScreenPatch
         };
 
         CardRewardSynchronizer.BroadcastCardReward(group);
-        Log.Debug($"Captured SpecialCardReward, isStolenBack={isStolenBack}");
-    }
-
-    /// <summary>
-    ///     判断是否是盗牌归还的遭遇
-    /// </summary>
-    private static bool IsStolenBackEncounter(ModelId? encounterId)
-    {
-        if (encounterId == null || encounterId == ModelId.none) return false;
-
-        // 盗牌相关的遭遇 ID
-        var stolenBackEncounters = new HashSet<string>
-        {
-            "ThievingHopperWeak",
-            "ThievingHopperStrong",
-            // 可以添加其他盗牌相关的遭遇
-        };
-
-        return stolenBackEncounters.Contains(encounterId!.Entry);
+        Log.Debug($"Captured SpecialCardReward {card.Id.Entry}");
     }
 }

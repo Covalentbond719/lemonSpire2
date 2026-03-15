@@ -7,7 +7,6 @@ using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
 using MegaCrit.Sts2.Core.Nodes.Potions;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.PlayerStateEx.PanelProvider;
@@ -19,8 +18,28 @@ namespace lemonSpire2.PlayerStateEx.PanelProvider;
 /// </summary>
 public class PotionProvider : IPlayerPanelProvider
 {
-    private static Logger Log => PlayerPanelRegistry.Log;
     private const float PotionScale = 0.6f;
+    private static Logger Log => PlayerPanelRegistry.Log;
+
+    #region Event Handlers
+
+    private static void OnPotionHolderReleased(NPotionHolder holder, PotionModel potion)
+    {
+        Log.Debug($"PotionHolder released: {potion.Id.Entry}, Alt={Input.IsKeyPressed(Key.Alt)}");
+
+        if (Input.IsKeyPressed(Key.Alt))
+        {
+            // Alt+Click: 发送药水到聊天
+            var segment = new TooltipSegment
+            {
+                Tooltip = PotionTooltip.FromModel(potion)
+            };
+            ProviderUtils.SendToChat(segment);
+        }
+        // 普通点击：不处理（holder 创建时 isUsable=false，不会打开使用弹窗）
+    }
+
+    #endregion
 
     #region IPlayerPanelProvider Implementation
 
@@ -119,26 +138,6 @@ public class PotionProvider : IPlayerPanelProvider
     {
         ArgumentNullException.ThrowIfNull(content);
         ProviderUtils.ClearChildren(content);
-    }
-
-    #endregion
-
-    #region Event Handlers
-
-    private static void OnPotionHolderReleased(NPotionHolder holder, PotionModel potion)
-    {
-        Log.Debug($"PotionHolder released: {potion.Id.Entry}, Alt={Input.IsKeyPressed(Key.Alt)}");
-
-        if (Input.IsKeyPressed(Key.Alt))
-        {
-            // Alt+Click: 发送药水到聊天
-            var segment = new TooltipSegment
-            {
-                Tooltip = PotionTooltip.FromModel(potion)
-            };
-            ProviderUtils.SendToChat(segment);
-        }
-        // 普通点击：不处理（holder 创建时 isUsable=false，不会打开使用弹窗）
     }
 
     #endregion

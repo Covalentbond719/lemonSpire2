@@ -27,7 +27,7 @@ public class ChatStore
             {
                 SenderId = senderId, // Will be filled by ChatStore
                 SenderName = senderName,
-                Timestamp = DateTime.Now,
+                Timestamp = DateTimeOffset.UtcNow,
                 Segments = [new RichTextSegment { Text = i.Text }]
             };
             Dispatch(new IntentSendMessage { Message = msg });
@@ -43,7 +43,7 @@ public class ChatStore
                 SenderId = senderId,
                 SenderName = senderName,
                 ReceiverId = receiverId,
-                Timestamp = DateTime.Now,
+                Timestamp = DateTimeOffset.UtcNow,
                 Segments = i.Segments
             };
             Dispatch(new IntentSendMessage { Message = msg });
@@ -87,7 +87,9 @@ public class ChatStore
 
         ArgumentNullException.ThrowIfNull(chatMessage);
 
-        if (senderId != 0 && chatMessage.SenderId != senderId)  ChatUiPatch.Log.Warn($"Received chat message with mismatched sender ID! SenderId: {senderId}, Message.SenderId: {chatMessage.SenderId}");
+        if (senderId != 0 && chatMessage.SenderId != senderId)
+            ChatUiPatch.Log.Warn(
+                $"Received chat message with mismatched sender ID! SenderId: {senderId}, Message.SenderId: {chatMessage.SenderId}");
 
         if (chatMessage.ReceiverId != 0 && chatMessage.ReceiverId != _netService.NetId)
         {

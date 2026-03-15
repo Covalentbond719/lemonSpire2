@@ -10,7 +10,7 @@ public record CardRewardGroup
     public string GroupId { get; set; } = "";
     public CardRewardSourceType Source { get; set; }
     public List<CardEntry> Cards { get; set; } = [];
-    public DateTime Timestamp { get; set; } = DateTime.Now;
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
 
     public void Serialize(PacketWriter writer)
     {

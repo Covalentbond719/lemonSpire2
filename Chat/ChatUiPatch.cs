@@ -5,7 +5,6 @@ using lemonSpire2.util;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Runs;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -28,10 +27,7 @@ public static class ChatUiPatch
     {
         ArgumentNullException.ThrowIfNull(__instance);
         var netService = RunManager.Instance.NetService;
-        if (!netService.Type.IsMultiplayer())
-        {
-            return;
-        }
+        if (!netService.Type.IsMultiplayer()) return;
 
         InitializeChat(__instance, runState);
         Log.Info("Initialized");

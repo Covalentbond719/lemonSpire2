@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SyncShop;
@@ -13,8 +12,6 @@ namespace lemonSpire2.SyncShop;
 /// </summary>
 public class ShopManager
 {
-    private static Logger Log => ShopNetworkHandler.Log;
-
     /// <summary>
     ///     玩家 NetId -> 商店物品列表
     /// </summary>
@@ -24,7 +21,9 @@ public class ShopManager
     {
     }
 
-    public static ShopManager Instance { get; private set; } = new();
+    private static Logger Log => ShopNetworkHandler.Log;
+
+    public static ShopManager Instance { get; } = new();
 
     /// <summary>
     ///     商店库存更新事件，参数为更新的玩家 NetId

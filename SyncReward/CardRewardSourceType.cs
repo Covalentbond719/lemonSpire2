@@ -13,10 +13,5 @@ public enum CardRewardSourceType
     /// <summary>
     ///     特殊卡牌奖励（固定牌）
     /// </summary>
-    Special,
-
-    /// <summary>
-    ///     被偷牌归还（不显示在面板）
-    /// </summary>
-    StolenBack
+    Special
 }

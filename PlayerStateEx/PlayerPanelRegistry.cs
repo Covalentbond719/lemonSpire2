@@ -1,7 +1,5 @@
-using lemonSpire2.PlayerStateEx.OverlayPanel;
 using lemonSpire2.PlayerStateEx.PanelProvider;
 using lemonSpire2.util;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -13,9 +11,9 @@ namespace lemonSpire2.PlayerStateEx;
 /// </summary>
 public static class PlayerPanelRegistry
 {
-    internal static Logger Log { get; } = new("lemon.player", LogType.Generic);
     private static readonly PriorityRegistry<IPlayerPanelProvider> Registry = new();
     private static bool _initialized;
+    internal static Logger Log { get; } = new("lemon.player", LogType.Generic);
 
     /// <summary>
     ///     初始化注册表，注册内置提供者

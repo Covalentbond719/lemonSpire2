@@ -1,7 +1,6 @@
 using lemonSpire2.util.Net;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -13,12 +12,12 @@ namespace lemonSpire2.SyncShop;
 /// </summary>
 public sealed class ShopNetworkHandler : NetworkHandlerBase<ShopInventoryMessage>
 {
-    internal static Logger Log { get; } = new("lemon.shop", LogType.GameSync);
-
     public ShopNetworkHandler(INetGameService netService) : base(netService)
     {
         Log.Info("ShopNetworkHandler initialized");
     }
+
+    internal static Logger Log { get; } = new("lemon.shop", LogType.GameSync);
 
     /// <summary>
     ///     广播本地玩家的商店库存
@@ -70,16 +69,13 @@ public sealed class ShopNetworkHandler : NetworkHandlerBase<ShopInventoryMessage
     {
         if (IsSelf(senderId)) return;
 
-        Log.Debug($"Received shop inventory from player {message.SenderId}, items={message.Items.Count}, isClear={message.IsClear}");
+        Log.Debug(
+            $"Received shop inventory from player {message.SenderId}, items={message.Items.Count}, isClear={message.IsClear}");
 
         if (message.IsClear)
-        {
             ShopManager.Instance.ClearInventory(message.SenderId);
-        }
         else
-        {
             ShopManager.Instance.UpdateInventory(message.SenderId, message.Items);
-        }
     }
 
     /// <summary>

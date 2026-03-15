@@ -10,7 +10,6 @@ using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.PlayerStateEx.PanelProvider;
@@ -23,6 +22,22 @@ namespace lemonSpire2.PlayerStateEx.PanelProvider;
 public class CardRewardProvider : IPlayerPanelProvider
 {
     private static Logger Log => PlayerPanelRegistry.Log;
+
+    #region Event Handlers
+
+    private static void OnCardClicked(CardModel card)
+    {
+        if (!Input.IsKeyPressed(Key.Alt)) return;
+
+        var segment = new TooltipSegment
+        {
+            Tooltip = CardTooltip.FromModel(card)
+        };
+        ProviderUtils.SendToChat(segment);
+        Log.Debug($"Sent card to chat: {card.Title}");
+    }
+
+    #endregion
 
     #region IPlayerPanelProvider
 
@@ -198,22 +213,6 @@ public class CardRewardProvider : IPlayerPanelProvider
         CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Right);
 
         return entry;
-    }
-
-    #endregion
-
-    #region Event Handlers
-
-    private static void OnCardClicked(CardModel card)
-    {
-        if (!Input.IsKeyPressed(Key.Alt)) return;
-
-        var segment = new TooltipSegment
-        {
-            Tooltip = CardTooltip.FromModel(card)
-        };
-        ProviderUtils.SendToChat(segment);
-        Log.Debug($"Sent card to chat: {card.Title}");
     }
 
     #endregion

@@ -1,12 +1,11 @@
-using MegaCrit.Sts2.Core.Logging;
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.Chat.Intent;
 
 public class IntentHandlerRegistry
 {
-    private static Logger Log => ChatUiPatch.Log;
     private readonly Dictionary<Type, Action<IIntent>> _handlers = new();
+    private static Logger Log => ChatUiPatch.Log;
 
     public void Register<T>(Action<T> handler) where T : IIntent
     {

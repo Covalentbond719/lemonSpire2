@@ -1,7 +1,6 @@
 using System.Reflection;
 using Godot;
 using HarmonyLib;
-using lemonSpire2.PlayerStateEx.OverlayPanel;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
@@ -11,7 +10,6 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Platform;
 using MegaCrit.Sts2.Core.Runs;
 using PlayerOverlayPanel = lemonSpire2.PlayerStateEx.OverlayPanel.PlayerOverlayPanel;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.PlayerStateEx;
@@ -26,8 +24,6 @@ namespace lemonSpire2.PlayerStateEx;
 [HarmonyPatch(typeof(NMultiplayerPlayerState))]
 public static class NMultiplayerPlayerStatePatch
 {
-    private static Logger Log => PlayerPanelRegistry.Log;
-
     /// <summary>
     ///     双击阈值（秒）
     /// </summary>
@@ -46,6 +42,8 @@ public static class NMultiplayerPlayerStatePatch
     ///     上次点击时间（用于检测双击）
     /// </summary>
     private static readonly Dictionary<NMultiplayerPlayerState, double> LastClickTimes = [];
+
+    private static Logger Log => PlayerPanelRegistry.Log;
 
     #region Tooltip on hover
 

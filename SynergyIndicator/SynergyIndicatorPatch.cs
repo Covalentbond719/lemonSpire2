@@ -2,7 +2,6 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -12,8 +11,6 @@ namespace lemonSpire2.SynergyIndicator;
 [HarmonyPatch(typeof(NMultiplayerPlayerState))]
 public static class SynergyIndicatorPatch
 {
-    internal static Logger Log { get; } = new("lemon.indicator", LogType.Network);
-
     /// <summary>
     ///     存储每个玩家实例的事件处理程序，用于在 _ExitTree 时取消订阅
     /// </summary>
@@ -21,6 +18,8 @@ public static class SynergyIndicatorPatch
         Dictionary<NMultiplayerPlayerState, (Action<CardModel> CardAdded, Action<CardModel> CardRemoved)>
         _eventHandlers =
             new();
+
+    internal static Logger Log { get; } = new("lemon.indicator", LogType.Network);
 
     [HarmonyPostfix]
     [HarmonyPatch("_Ready")]

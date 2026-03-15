@@ -3,7 +3,6 @@ using MegaCrit.Sts2.addons.mega_text;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -15,8 +14,6 @@ namespace lemonSpire2.Tooltips;
 /// </summary>
 public abstract class Tooltip
 {
-    internal static Logger Log { get; } = new("lemon.tooltip", LogType.Generic);
-
     private static int _nextRegistryId = 1;
     private static readonly Dictionary<int, WeakReference<Tooltip>> Registry = new();
 
@@ -27,6 +24,8 @@ public abstract class Tooltip
         RegistryId = _nextRegistryId++;
         Registry[RegistryId] = new WeakReference<Tooltip>(this);
     }
+
+    internal static Logger Log { get; } = new("lemon.tooltip", LogType.Generic);
 
     protected abstract string TypeTag { get; }
 

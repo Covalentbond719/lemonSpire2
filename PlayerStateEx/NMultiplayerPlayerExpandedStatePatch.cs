@@ -28,12 +28,10 @@ public static class NMultiplayerPlayerExpandedStatePatch
 
         // 为每个 NDeckHistoryEntry 绑定 HoverTip
         foreach (var child in cardContainer.GetChildren())
-        {
             if (child is NDeckHistoryEntry entry)
             {
                 var card = entry.Card;
                 CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Right);
             }
-        }
     }
 }

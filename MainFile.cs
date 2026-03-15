@@ -27,10 +27,7 @@ public partial class MainFile : Node
 
         Harmony harmony = new(ModId);
 
-        if (EnableQoL)
-        {
-            harmony.CreateClassProcessor(typeof(NMultiplayerPlayerExpandedStatePatch)).Patch();
-        }
+        if (EnableQoL) harmony.CreateClassProcessor(typeof(NMultiplayerPlayerExpandedStatePatch)).Patch();
 
         if (EnableChat)
         {
@@ -71,7 +68,8 @@ public partial class MainFile : Node
     private static void SetupLogLevels()
     {
         // 为所有 LogType 设置 Debug 级别，启用调试日志
-        if(false){
+        if (false)
+        {
             Logger.SetLogLevelForType(LogType.Generic, LogLevel.Debug);
             Logger.SetLogLevelForType(LogType.Network, LogLevel.Debug);
             Logger.SetLogLevelForType(LogType.Actions, LogLevel.Debug);
@@ -83,7 +81,7 @@ public partial class MainFile : Node
     #region Feature Flags
 
     /// <summary>
-    /// Multiplayer QoL System:
+    ///     Multiplayer QoL System:
     /// </summary>
     public static bool EnableQoL { get; set; } = true;
 
@@ -101,5 +99,4 @@ public partial class MainFile : Node
     public static bool EnableSync { get; set; } = true;
 
     #endregion
-
 }

@@ -1,6 +1,5 @@
 using lemonSpire2.util.Net;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 using LogType = MegaCrit.Sts2.Core.Logging.LogType;
 
@@ -12,12 +11,12 @@ namespace lemonSpire2.SyncReward;
 /// </summary>
 public sealed class CardRewardNetworkHandler : NetworkHandlerBase<CardRewardMessage>
 {
-    internal static Logger Log { get; } = new("lemon.reward", LogType.GameSync);
-
     public CardRewardNetworkHandler(INetGameService netService) : base(netService)
     {
         Log.Info("CardRewardNetworkHandler initialized");
     }
+
+    internal static Logger Log { get; } = new("lemon.reward", LogType.GameSync);
 
     /// <summary>
     ///     广播卡牌奖励组
@@ -61,12 +60,8 @@ public sealed class CardRewardNetworkHandler : NetworkHandlerBase<CardRewardMess
         Log.Debug($"Received card reward from player {message.SenderId}, isClear={message.IsClear}");
 
         if (message.IsClear)
-        {
             CardRewardManager.Instance.ClearGroups(message.SenderId);
-        }
         else
-        {
             CardRewardManager.Instance.AddGroup(message.SenderId, message.Group);
-        }
     }
 }

@@ -6,7 +6,6 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using IndicatorPanel = lemonSpire2.SynergyIndicator.Ui.IndicatorPanel;
-
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SynergyIndicator;
@@ -14,9 +13,8 @@ namespace lemonSpire2.SynergyIndicator;
 /// <summary>
 ///     统一管理器，负责维护所有玩家的指示器 UI 面板
 /// </summary>
-public sealed class IndicatorManager: IDisposable
+public sealed class IndicatorManager : IDisposable
 {
-    private static Logger Log => SynergyIndicatorPatch.Log;
     private static IndicatorManager? _instance;
 
     private static readonly IReadOnlyList<IIndicatorProvider> Providers =
@@ -41,7 +39,15 @@ public sealed class IndicatorManager: IDisposable
         _noticeSound = GD.Load<AudioStream>("res://lemonSpire2/synergy-notice.mp3");
     }
 
+    private static Logger Log => SynergyIndicatorPatch.Log;
+
     public static IndicatorManager Instance => _instance ??= new IndicatorManager();
+
+    public void Dispose()
+    {
+        _noticeSound?.Dispose();
+        _networkHandler?.Dispose();
+    }
 
     public void InitializeNetwork(INetGameService netService)
     {
@@ -141,12 +147,7 @@ public sealed class IndicatorManager: IDisposable
             if (provider.ShouldShow(cards))
                 Instance.AddIndicator(netId, provider.Type, IndicatorStatus.WillUse);
 
-        Log.Debug($"Updated synergy status for player {netId}: {(hasSynergy ? "Has synergy cards" : "No synergy cards")}");
-    }
-
-    public void Dispose()
-    {
-        _noticeSound?.Dispose();
-        _networkHandler?.Dispose();
+        Log.Debug(
+            $"Updated synergy status for player {netId}: {(hasSynergy ? "Has synergy cards" : "No synergy cards")}");
     }
 }
