@@ -25,13 +25,9 @@ public static class ProviderUtils
         ArgumentNullException.ThrowIfNull(container);
         foreach (var child in container.GetChildren())
         {
-            // 先从父节点移除，再删除，避免布局计算时仍占用空间
             container.RemoveChild(child);
             child?.QueueFree();
         }
-        // 只重置高度，保持宽度不变（宽度由 SizeFlags 控制）
-        container.Size = new Vector2(container.Size.X, 0);
-        container.CustomMinimumSize = new Vector2(container.CustomMinimumSize.X, 0);
     }
 
     /// <summary>

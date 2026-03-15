@@ -63,15 +63,11 @@ public class HandCardProvider : IPlayerPanelProvider
             return;
         }
 
-        var cardCount = hand.Cards.Count;
-        Log.Debug($"UpdateContent: hand has {cardCount} cards, container children before={container.GetChildCount()}");
-
         // 清除现有内容
         ProviderUtils.ClearChildren(container);
 
-        Log.Debug($"UpdateContent: container children after ClearChildren={container.GetChildCount()}");
-
         // 添加手牌数量显示
+        var cardCount = hand.Cards.Count;
         var handLabel = new LocString("gameplay_ui", "LEMONSPIRE.panel.hand").GetFormattedText();
         var countLabel = new Label
         {
@@ -91,11 +87,9 @@ public class HandCardProvider : IPlayerPanelProvider
             var count = group.Count();
             var entry = NDeckHistoryEntry.Create(card, count);
 
-            // 使用 Connect 方法订阅点击事件（与游戏源码一致）
             entry.Connect(NDeckHistoryEntry.SignalName.Clicked,
                 Callable.From<NDeckHistoryEntry>(e => OnEntryClicked(e.Card, player)));
 
-            // 添加悬浮提示功能
             CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Right);
 
             container.AddChild(entry);
@@ -113,14 +107,8 @@ public class HandCardProvider : IPlayerPanelProvider
             return null;
         }
 
-        void OnHandChanged()
-        {
-            Log.Debug("Hand ContentsChanged event triggered");
-            onUpdate();
-        }
-
-        hand.ContentsChanged += OnHandChanged;
-        return () => hand.ContentsChanged -= OnHandChanged;
+        hand.ContentsChanged += onUpdate;
+        return () => hand.ContentsChanged -= onUpdate;
     }
 
     public void Cleanup(Control content)
