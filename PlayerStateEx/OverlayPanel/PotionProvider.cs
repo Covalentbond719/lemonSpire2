@@ -120,9 +120,9 @@ public class PotionProvider : IPlayerPanelProvider
     private static void OnPotionHolderReleased(NPotionHolder holder, PotionModel potion)
     {
         MainFile.Logger.Debug(
-            $"[PotionProvider] PotionHolder released: {potion.Id.Entry}, Alt={ProviderUtils.IsAltClick()}");
+            $"[PotionProvider] PotionHolder released: {potion.Id.Entry}, Alt={Input.IsKeyPressed(Key.Alt)}");
 
-        if (ProviderUtils.IsAltClick())
+        if (Input.IsKeyPressed(Key.Alt))
         {
             // Alt+Click: 发送药水到聊天
             var segment = new TooltipSegment

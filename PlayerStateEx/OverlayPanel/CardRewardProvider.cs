@@ -172,7 +172,7 @@ public class CardRewardProvider : IPlayerPanelProvider
 
     private static void OnCardClicked(CardModel card)
     {
-        if (!ProviderUtils.IsAltClick()) return;
+        if (!Input.IsKeyPressed(Key.Alt)) return;
 
         var segment = new TooltipSegment
         {

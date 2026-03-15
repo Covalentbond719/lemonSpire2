@@ -20,13 +20,13 @@ namespace lemonSpire2.PlayerStateEx.OverlayPanel;
 /// <summary>
 ///     商店显示提供者
 ///     显示玩家商店中的卡牌、遗物、药水
-///     使用原生组件样式：NDeckHistoryEntry, NRelic, NPotion
+///     卡牌：横向布局，左价格右卡牌
+///     遗物/药水：网格布局，物品在上价格在下，一行三个
 ///     支持 Alt+Click 发送物品到聊天
 /// </summary>
 public class ShopProvider : IPlayerPanelProvider
 {
-    private const float ItemScale = 0.5f;
-    private const float PotionScale = 0.6f;
+    private const int ItemsPerRow = 3;
 
     public string ProviderId => "shop";
     public int Priority => 30;
@@ -45,7 +45,7 @@ public class ShopProvider : IPlayerPanelProvider
             Name = "ShopContainer",
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        container.AddThemeConstantOverride("separation", 4);
+        container.AddThemeConstantOverride("separation", 8);
 
         return container;
     }
@@ -57,12 +57,10 @@ public class ShopProvider : IPlayerPanelProvider
         ArgumentNullException.ThrowIfNull(player);
         if (content is not VBoxContainer container) return;
 
-        // 清除现有内容
         ProviderUtils.ClearChildren(container);
 
         // 显示对方金币
-        var goldRow = CreateGoldRow(player);
-        container.AddChild(goldRow);
+        container.AddChild(CreateGoldRow(player));
 
         var items = ShopManager.Instance.GetInventory(player.NetId);
         if (items == null || items.Count == 0)
@@ -77,28 +75,22 @@ public class ShopProvider : IPlayerPanelProvider
             return;
         }
 
-        // 分组显示：卡牌、遗物、药水
+        // 分组显示
         var cards = items.Where(i => i is { Type: ShopItemType.Card, IsStocked: true }).ToList();
         var relics = items.Where(i => i is { Type: ShopItemType.Relic, IsStocked: true }).ToList();
         var potions = items.Where(i => i is { Type: ShopItemType.Potion, IsStocked: true }).ToList();
 
-        // 卡牌行
+        // 卡牌：横向布局
         foreach (var card in cards)
-        {
             AddCardRow(container, player, card);
-        }
 
-        // 遗物行
-        foreach (var relic in relics)
-        {
-            AddRelicRow(container, player, relic);
-        }
+        // 遗物：网格布局，物品在上价格在下
+        if (relics.Count > 0)
+            AddItemGrid(container, player, relics, AddRelicItem);
 
-        // 药水行
-        foreach (var potion in potions)
-        {
-            AddPotionRow(container, player, potion);
-        }
+        // 药水：网格布局，物品在上价格在下
+        if (potions.Count > 0)
+            AddItemGrid(container, player, potions, AddPotionItem);
 
         MainFile.Logger.Debug(
             $"[ShopProvider] Updated content for player {player.NetId}: {cards.Count} cards, {relics.Count} relics, {potions.Count} potions");
@@ -106,10 +98,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static HBoxContainer CreateGoldRow(Player player)
     {
-        var row = new HBoxContainer
-        {
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
-        };
+        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         row.AddThemeConstantOverride("separation", 4);
 
         var goldIcon = new TextureRect
@@ -143,6 +132,9 @@ public class ShopProvider : IPlayerPanelProvider
         return row;
     }
 
+    /// <summary>
+    ///     卡牌：横向布局，左价格右卡牌
+    /// </summary>
     private static void AddCardRow(VBoxContainer container, Player player, ShopItemEntry entry)
     {
         var card = StsUtil.ResolveModel<CardModel>(entry.ModelId);
@@ -154,7 +146,8 @@ public class ShopProvider : IPlayerPanelProvider
         var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         row.AddThemeConstantOverride("separation", 4);
 
-        AddPriceLabel(row, player, entry);
+        var priceLabel = CreatePriceLabel(player, entry);
+        row.AddChild(priceLabel);
 
         var nEntry = NDeckHistoryEntry.Create(card, 1);
         nEntry.Connect(NDeckHistoryEntry.SignalName.Clicked,
@@ -165,7 +158,32 @@ public class ShopProvider : IPlayerPanelProvider
         container.AddChild(row);
     }
 
-    private static void AddRelicRow(VBoxContainer container, Player player, ShopItemEntry entry)
+    /// <summary>
+    ///     网格布局：物品在上价格在下，一行多个
+    /// </summary>
+    private static void AddItemGrid(VBoxContainer container, Player player,
+        List<ShopItemEntry> items, Action<Player, ShopItemEntry, HBoxContainer> addItem)
+    {
+        for (var i = 0; i < items.Count; i += ItemsPerRow)
+        {
+            var row = new HBoxContainer
+            {
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+            };
+            row.AddThemeConstantOverride("separation", 8);
+
+            // 先加入场景树，让子节点的 _Ready() 能正常执行
+            container.AddChild(row);
+
+            for (var j = 0; j < ItemsPerRow && i + j < items.Count; j++)
+                addItem(player, items[i + j], row);
+        }
+    }
+
+    /// <summary>
+    ///     添加遗物项到行：物品在上，价格在下
+    /// </summary>
+    private static void AddRelicItem(Player player, ShopItemEntry entry, HBoxContainer row)
     {
         var relic = StsUtil.ResolveModel<RelicModel>(entry.ModelId);
         if (relic == null) return;
@@ -173,29 +191,30 @@ public class ShopProvider : IPlayerPanelProvider
         var holder = NRelicBasicHolder.Create(relic.ToMutable());
         if (holder == null) return;
 
-        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        row.AddThemeConstantOverride("separation", 4);
+        var container = new VBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin
+        };
+        container.AddThemeConstantOverride("separation", 2);
 
-        AddPriceLabel(row, player, entry);
-        row.AddChild(holder);
-        container.AddChild(row);
+        // 物品在上（先加入场景树）
+        container.AddChild(holder);
 
-        // 现在 row 在场景树中，holder._Ready() 已执行
+        // 价格在下
+        var priceLabel = CreatePriceLabel(player, entry, true);
+        container.AddChild(priceLabel);
+
+        // 连接事件
         holder.Connect(NClickableControl.SignalName.Released,
             Callable.From(() => OnRelicClicked(player, entry, relic)));
 
-        // 设置缩放（与 PotionProvider 一样的模式）
-        var nRelic = holder.Relic;
-        if (nRelic != null)
-        {
-            nRelic.PivotOffset = nRelic.Size * 0.5f;  // 关键：设置中心点。见 Sts2...NPotionHolder.AddPotion
-            nRelic.Position = Vector2.Zero; // 关键：重置位置，否则会出现偏移
-            nRelic.Scale = Vector2.One * ItemScale;
-            holder.CustomMinimumSize = nRelic.Size * ItemScale;
-        }
+        row.AddChild(container);
     }
 
-    private static void AddPotionRow(VBoxContainer container, Player player, ShopItemEntry entry)
+    /// <summary>
+    ///     添加药水项到行：物品在上，价格在下
+    /// </summary>
+    private static void AddPotionItem(Player player, ShopItemEntry entry, HBoxContainer row)
     {
         var potion = StsUtil.ResolveModel<PotionModel>(entry.ModelId);
         if (potion == null) return;
@@ -204,34 +223,50 @@ public class ShopProvider : IPlayerPanelProvider
         if (nPotion == null) return;
 
         var holder = NPotionHolder.Create(false);
+        if (holder == null) return;
 
-        var row = new HBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        row.AddThemeConstantOverride("separation", 4);
+        var container = new VBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin
+        };
+        container.AddThemeConstantOverride("separation", 2);
 
-        AddPriceLabel(row, player, entry);
-        row.AddChild(holder);
-        container.AddChild(row);
-
-        // 现在 row 在场景树中，holder._Ready() 已执行
-        holder.Connect(NClickableControl.SignalName.Released,
-            Callable.From(() => OnPotionClicked(player, entry, potion)));
-
-        // 与 PotionProvider 完全一样的模式
+        // 物品在上（先加入场景树）
+        row.AddChild(container);
+        container.AddChild(holder);
         holder.AddPotion(nPotion);
         nPotion.Position = Vector2.Zero;
-        ProviderUtils.SetPotionScale(holder, PotionScale);
-        nPotion.Scale = Vector2.One * PotionScale;
-        holder.CustomMinimumSize = nPotion.Size * PotionScale;
+        // 价格在下
+        var priceLabel = CreatePriceLabel(player, entry, true);
+        container.AddChild(priceLabel);
+
+        // 连接事件
+        holder.Connect(NClickableControl.SignalName.Released,
+            Callable.From(() => OnPotionClicked(player, entry, potion)));
     }
 
-    private static void AddPriceLabel(HBoxContainer row, Player player, ShopItemEntry entry)
+    private static Label CreatePriceLabel(Player player, ShopItemEntry entry, bool centered = false)
     {
-        var priceLabel = new Label
+        Label priceLabel;
+        if (centered)
         {
-            Text = $"{entry.Cost}g",
-            CustomMinimumSize = new Vector2(36, 0),
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
+            priceLabel = new Label
+            {
+                Text = $"{entry.Cost}g",
+                HorizontalAlignment = HorizontalAlignment.Center,
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+        }
+        else
+        {
+            priceLabel = new Label
+            {
+                Text = $"{entry.Cost}g",
+                CustomMinimumSize = new Vector2(36, 0),
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+        }
 
         if (player.Gold < entry.Cost)
             priceLabel.AddThemeColorOverride("font_color", StsColors.red);
@@ -240,8 +275,8 @@ public class ShopProvider : IPlayerPanelProvider
         else
             priceLabel.AddThemeColorOverride("font_color", StsColors.cream);
 
-        priceLabel.AddThemeFontSizeOverride("font_size", 16);
-        row.AddChild(priceLabel);
+        priceLabel.AddThemeFontSizeOverride("font_size", 14);
+        return priceLabel;
     }
 
     public Action SubscribeEvents(Player player, Action onUpdate)
@@ -282,7 +317,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnCardClicked(Player player, ShopItemEntry entry, CardModel card)
     {
-        if (!ProviderUtils.IsAltClick()) return;
+        if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = CardTooltip.FromModel(card) };
         ProviderUtils.SendToChat(segment);
         MainFile.Logger.Debug($"[ShopProvider] Sent card to chat: {card.Title}");
@@ -290,7 +325,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnRelicClicked(Player player, ShopItemEntry entry, RelicModel relic)
     {
-        if (!ProviderUtils.IsAltClick()) return;
+        if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = RelicTooltip.FromModel(relic) };
         ProviderUtils.SendToChat(segment);
         MainFile.Logger.Debug($"[ShopProvider] Sent relic to chat: {relic.Id.Entry}");
@@ -298,7 +333,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnPotionClicked(Player player, ShopItemEntry entry, PotionModel potion)
     {
-        if (!ProviderUtils.IsAltClick()) return;
+        if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = PotionTooltip.FromModel(potion) };
         ProviderUtils.SendToChat(segment);
         MainFile.Logger.Debug($"[ShopProvider] Sent potion to chat: {potion.Id.Entry}");

@@ -31,11 +31,6 @@ public static class ProviderUtils
     }
 
     /// <summary>
-    ///     检测是否为 Alt+Click
-    /// </summary>
-    public static bool IsAltClick() => Input.IsKeyPressed(Key.Alt);
-
-    /// <summary>
     ///     发送 TooltipSegment 到聊天
     /// </summary>
     public static void SendToChat(TooltipSegment segment)

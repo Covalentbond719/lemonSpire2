@@ -126,12 +126,12 @@ public class HandCardProvider : IPlayerPanelProvider
 
     private static void OnEntryClicked(CardModel card, Player player)
     {
-        MainFile.Logger.Debug($"[HandCardProvider] OnEntryClicked: {card.Title}, Alt={ProviderUtils.IsAltClick()}");
+        MainFile.Logger.Debug($"[HandCardProvider] OnEntryClicked: {card.Title}, Alt={Input.IsKeyPressed(Key.Alt)}");
 
         // 每次点击时重新获取手牌列表，确保是最新的
         var cards = player.PlayerCombatState?.Hand.Cards.ToList() ?? new List<CardModel>();
 
-        if (ProviderUtils.IsAltClick())
+        if (Input.IsKeyPressed(Key.Alt))
         {
             // Alt+Click: 发送卡牌到聊天
             var segment = new TooltipSegment
