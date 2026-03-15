@@ -1,8 +1,8 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Runs;
-using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
 namespace lemonSpire2.SynergyIndicator;
 
@@ -10,8 +10,6 @@ namespace lemonSpire2.SynergyIndicator;
 [HarmonyPatch(typeof(NGlobalUi), "Initialize")]
 public static class SynergyIndicatorNetworkPatch
 {
-    private static Logger Log => SynergyIndicatorPatch.Log;
-
     [HarmonyPostfix]
     public static void Postfix(NGlobalUi __instance, RunState runState)
     {
