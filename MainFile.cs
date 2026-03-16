@@ -66,6 +66,7 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(MapDrawColorPatch)).Patch();
             harmony.CreateClassProcessor(typeof(RemoteCursorColorPatch)).Patch();
             harmony.CreateClassProcessor(typeof(ColorNetworkPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(PlayerColorButtonPatch)).Patch();
         }
 
         if (PlayerTooltipRegistry.HasProviders)
@@ -76,6 +77,8 @@ public partial class MainFile : Node
 
     private static void SetupLogLevels()
     {
+        Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
+
         // 为所有 LogType 设置 Debug 级别，启用调试日志
         if (false)
         {
