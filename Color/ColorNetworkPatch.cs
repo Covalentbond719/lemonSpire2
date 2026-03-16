@@ -26,7 +26,7 @@ public static class ColorNetworkPatch
         ColorManager.Log.Info("ColorManager network initialized");
 
         // TEST: 预设测试颜色
-        InitTestColors();
+        // InitTestColors();
     }
 
     private static void InitTestColors()
