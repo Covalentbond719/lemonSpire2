@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Events;
+using MegaCrit.Sts2.Core.Nodes.Orbs;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using MegaCrit.Sts2.Core.Nodes.Relics;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
@@ -45,6 +46,9 @@ public static class ItemInputHandler
                 case NEventOptionButton { Option.Relic: { } relic }:
                     // Ancient 遗物三选一选项
                     return CreateRelicSegment(relic);
+
+                case NOrb { Model: { } orb }:
+                    return CreateOrbSegment(orb);
 
                 case NPower { Model: { } pm }:
                     return CreatePowerSegment(pm);
@@ -153,6 +157,14 @@ public static class ItemInputHandler
         return new TooltipSegment
         {
             Tooltip = PowerTooltip.FromModel(pm)
+        };
+    }
+
+    private static TooltipSegment CreateOrbSegment(OrbModel orb)
+    {
+        return new TooltipSegment
+        {
+            Tooltip = OrbTooltip.FromModel(orb)
         };
     }
 
