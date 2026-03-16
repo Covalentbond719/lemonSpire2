@@ -1,3 +1,4 @@
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
@@ -23,5 +24,17 @@ public static class ColorNetworkPatch
 
         NetworkHandler = new ColorNetworkHandler(netService);
         ColorManager.Log.Info("ColorManager network initialized");
+
+        // TEST: 预设测试颜色
+        InitTestColors();
+    }
+
+    private static void InitTestColors()
+    {
+        // netId 1 = 红色
+        ColorManager.Instance.SetPlayerColor(1, Colors.Red);
+        // netId 1000 = 蓝色
+        ColorManager.Instance.SetPlayerColor(1000, Colors.Blue);
+        ColorManager.Log.Info("Test colors initialized: netId 1=red, netId 1000=blue");
     }
 }

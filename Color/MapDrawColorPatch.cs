@@ -22,7 +22,7 @@ public static class MapDrawColorPatch
     {
         ArgumentNullException.ThrowIfNull(player);
         // 如果是橡皮擦模式，不修改颜色
-        if (isErasing) return;
+        // if (isErasing) return;
 
         // 获取自定义颜色
         var customColor = ColorManager.Instance.GetCustomColor(player.NetId);

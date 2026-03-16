@@ -12,7 +12,19 @@ namespace lemonSpire2.PlayerColor;
 [HarmonyPatch(typeof(NRemoteMouseCursor))]
 public static class RemoteCursorColorPatch
 {
-    private static readonly Dictionary<NRemoteMouseCursor, Action<ulong, Color>> ColorChangeHandlers = new();
+    /// <summary>
+    ///     混合模式配置
+    ///     <para>CanvasItemMaterial.BlendModeEnum 选项说明：</para>
+    ///     <para>- Mix: 默认混合，颜色与背景按透明度混合</para>
+    ///     <para>- Add: 加法混合，颜色叠加到背景上，暗色也会变亮</para>
+    ///     <para>- Sub: 减法混合，从背景减去颜色</para>
+    ///     <para>- Mul: 乘法混合，颜色与背景相乘</para>
+    ///     <para>- PremultAlpha: 预乘 Alpha</para>
+    /// </summary>
+    private const CanvasItemMaterial.BlendModeEnum CursorBlendMode = CanvasItemMaterial.BlendModeEnum.Add;
+
+    private static readonly List<(WeakReference<NRemoteMouseCursor> Cursor, Action<ulong, Color> Handler)>
+        Registrations = new();
 
     [HarmonyPostfix]
     [HarmonyPatch("_Ready")]
@@ -26,7 +38,9 @@ public static class RemoteCursorColorPatch
             if (changedPlayerId == playerId) UpdateCursorColor(__instance, color);
         };
 
-        ColorChangeHandlers[__instance] = handler;
+        // 使用弱引用存储，避免内存泄漏
+        CleanupDeadReferences();
+        Registrations.Add((new WeakReference<NRemoteMouseCursor>(__instance), handler));
         ColorManager.Instance.OnPlayerColorChanged += handler;
 
         // 设置初始颜色
@@ -34,18 +48,25 @@ public static class RemoteCursorColorPatch
         if (customColor.HasValue) UpdateCursorColor(__instance, customColor.Value);
     }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("_ExitTree")]
-    public static void ExitTreePrefix(NRemoteMouseCursor __instance)
+    private static void CleanupDeadReferences()
     {
-        if (ColorChangeHandlers.Remove(__instance, out var handler))
-            ColorManager.Instance.OnPlayerColorChanged -= handler;
+        for (var i = Registrations.Count - 1; i >= 0; i--)
+        {
+            if (Registrations[i].Cursor.TryGetTarget(out var cursor) && GodotObject.IsInstanceValid(cursor)) continue;
+            ColorManager.Instance.OnPlayerColorChanged -= Registrations[i].Handler;
+            Registrations.RemoveAt(i);
+        }
     }
 
     private static void UpdateCursorColor(NRemoteMouseCursor instance, Color color)
     {
-        // 获取 TextureRect 子节点并设置 Modulate
         var textureRect = instance.GetNode<TextureRect>("TextureRect");
-        if (textureRect != null) textureRect.Modulate = color;
+        if (textureRect == null) return;
+
+        textureRect.Modulate = color;
+        textureRect.Material = new CanvasItemMaterial
+        {
+            BlendMode = CursorBlendMode
+        };
     }
 }
