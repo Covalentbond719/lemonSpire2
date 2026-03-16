@@ -1,6 +1,7 @@
 using Godot;
 using HarmonyLib;
 using lemonSpire2.Chat;
+using lemonSpire2.PlayerColor;
 using lemonSpire2.PlayerStateEx;
 using lemonSpire2.SendGameItem;
 using lemonSpire2.StatsTracker;
@@ -59,6 +60,15 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(RunManagerPatch)).Patch();
         }
 
+        if (EnablePlayerColor)
+        {
+            harmony.CreateClassProcessor(typeof(PlayerNameColorPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(MapDrawColorPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(RemoteCursorColorPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(ColorNetworkPatch)).Patch();
+            harmony.CreateClassProcessor(typeof(PlayerColorButtonPatch)).Patch();
+        }
+
         if (PlayerTooltipRegistry.HasProviders)
             harmony.CreateClassProcessor(typeof(NMultiplayerPlayerStatePatch)).Patch();
 
@@ -67,6 +77,8 @@ public partial class MainFile : Node
 
     private static void SetupLogLevels()
     {
+        Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
+
         // 为所有 LogType 设置 Debug 级别，启用调试日志
         if (false)
         {
@@ -97,6 +109,9 @@ public partial class MainFile : Node
 
     /// <summary> Extra Sync </summary>
     public static bool EnableSync { get; set; } = true;
+
+    /// <summary> Player Color Management </summary>
+    public static bool EnablePlayerColor { get; set; } = true;
 
     #endregion
 }
