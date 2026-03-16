@@ -10,6 +10,15 @@ it seems this mod cannot function properly without BaseLib installed.
 
 ## Features
 
+### Color / Drawing Related
+
+Change your color!
+
+Affects: cursor color, map drawing color, player name color in the left info panel, and name color in chat messages.
+
+(TODO) It seems a bit too eye-catching / hurts readability. Might need to find a way to modify the inner color without
+changing the outer stroke color.
+
 ### Simple Teammate Synergy Indicator
 
 Visually displays on the UI whether teammates have drawn "multiplayer-exclusive cards" or have cards that apply
@@ -86,17 +95,12 @@ By the way, items mentioned above inside this hover panel also support `Alt + Cl
 ### Better BBCode
 
 The current chat box **does not escape user input at all (What?!)**, so please keep your teammates in check and don't
-let them send unclosed tags that will turn the entire chat box styling into a total mess.
+let them send unclosed tags that will turn the entire chat box styling into a total mess. (Well, this is now on the
+development plan and will be fixed soon.)
 
 Later on, I really want to make a tag feature that displays the corresponding Tooltip by doing a reverse i18n lookup.
 For example, typing `[card:Flank]` would directly display the hover tooltip for "Flank" in the chat. This way you can "
 Discover" cards you don't even have in your hand yet, and tell your teammates to quickly find some for you.
-
-### Color / Drawing Related
-
-Plan to support modifying the color of player names on the left side, modifying the screen drawing color, and syncing
-this custom color to the names shown in chat messages. I personally really love making these kinds of integrated
-features.
 
 ### Command System
 
@@ -107,3 +111,4 @@ features.
   enable interactive card-giving) would directly impact the original Gameplay...
 - ...this doesn't quite fit the QoL theme of this mod. Therefore, I might make a separate mod dedicated to more
   multiplayer commands in the future.
+- Hmm, seems like adding commands to the vanilla console isn't that hard either. Maybe I just won't do it.
