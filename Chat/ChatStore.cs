@@ -1,5 +1,7 @@
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
+using lemonSpire2.util;
+using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Platform;
 
@@ -20,6 +22,8 @@ public class ChatStore
         // 注册核心基础意图的处理逻辑
         IntentRegistry.Register<IntentTextSubmit>(i =>
         {
+            var safeText = BbCodeUtils.AutoCloseUnclosedTags(i.Text);
+
             // Fill sender ID, name, and UTC timestamp
             var senderId = _netService.NetId;
             var senderName = PlatformUtil.GetPlayerName(_netService.Platform, senderId);
@@ -28,7 +32,7 @@ public class ChatStore
                 SenderId = senderId, // Will be filled by ChatStore
                 SenderName = senderName,
                 Timestamp = DateTimeOffset.UtcNow,
-                Segments = [new RichTextSegment { Text = i.Text }]
+                Segments = [new RichTextSegment { Text = safeText }]
             };
             Dispatch(new IntentSendMessage { Message = msg });
         });
@@ -54,6 +58,8 @@ public class ChatStore
         );
         IntentRegistry.Register<IntentReceiveMessage>(i => { Model.AppendMessage(i.Message); });
     }
+
+    private static Logger Log => ChatUiPatch.Log;
 
     /// <summary>
     ///     当前活跃的 ChatStore 实例，供其他模块（如 SendItem）使用
@@ -109,5 +115,26 @@ public class ChatStore
         }
 
         ChatUiPatch.Log.Error("Basic intent registered, should not happen! ");
+    }
+
+    /// <summary>
+    ///     发送消息片段到聊天
+    /// </summary>
+    public static void SendToChat(params IMsgSegment[] segments)
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+        var store = Instance;
+        if (store == null)
+        {
+            Log.Warn("ChatStore.Instance is null");
+            return;
+        }
+
+        store.Dispatch(new IntentSendSegments
+        {
+            ReceiverId = 0,
+            Segments = segments
+        });
+        Log.Info($"Sent to chat: {string.Join(", ", segments.Select(s => s.Render()))}");
     }
 }

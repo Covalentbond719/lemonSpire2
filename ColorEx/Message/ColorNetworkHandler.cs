@@ -33,6 +33,8 @@ public class ColorNetworkHandler : NetworkHandlerBase<PlayerColorMessage>
 
     protected override void OnReceiveMessage(PlayerColorMessage message, ulong senderId)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         // 如果是自己的消息，忽略（已经在本地处理过了）
         if (IsSelf(senderId)) return;
 

@@ -1,6 +1,5 @@
 using Godot;
 using lemonSpire2.util;
-using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
@@ -32,7 +31,7 @@ public sealed class OrbTooltip : Tooltip
         if (orb is null) return "Broken Orb";
 
         var title = orb.Title.GetFormattedText();
-        var iconPath = ImageHelper.GetImagePath($"orbs/{OrbIdStr.ToLowerInvariant()}.png");
+        var iconPath = orb.IconPath;
 
         return $"[img={16}x{16}]{iconPath}[/img] [color=#88ccff]{title}[/color]";
     }

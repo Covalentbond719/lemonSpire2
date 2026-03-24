@@ -38,6 +38,7 @@ public class CardRewardManager
     /// </summary>
     public void AddGroup(ulong playerNetId, CardRewardGroup group)
     {
+        ArgumentNullException.ThrowIfNull(group);
         var groups = _playerRewards.GetOrAdd(playerNetId, _ => []);
         groups.Add(group);
 

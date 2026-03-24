@@ -78,16 +78,6 @@ public partial class MainFile : Node
     private static void SetupLogLevels()
     {
         Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
-
-        // 为所有 LogType 设置 Debug 级别，启用调试日志
-        if (false)
-        {
-            Logger.SetLogLevelForType(LogType.Generic, LogLevel.Debug);
-            Logger.SetLogLevelForType(LogType.Network, LogLevel.Debug);
-            Logger.SetLogLevelForType(LogType.Actions, LogLevel.Debug);
-            Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
-            Logger.SetLogLevelForType(LogType.VisualSync, LogLevel.Debug);
-        }
     }
 
     #region Feature Flags

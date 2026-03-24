@@ -29,6 +29,7 @@ public static class PlayerColorButtonPatch
     [HarmonyPatch("_Ready")]
     public static void ReadyPostfix(NMultiplayerPlayerState __instance)
     {
+        ArgumentNullException.ThrowIfNull(__instance);
         // 只对本地玩家显示颜色按钮
         if (!LocalContext.IsMe(__instance.Player)) return;
 

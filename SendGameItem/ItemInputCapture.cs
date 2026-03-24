@@ -23,7 +23,7 @@ public partial class ItemInputCapture : Control
     ///     设为 true 可以防止 Alt+Click 在商店等场景触发购买
     ///     设为 false 允许其他 Mod 处理 Alt+Click
     /// </summary>
-    public static bool BlockAltClickOnNoItem { get; set; } = false;
+    public static bool BlockAltClickOnNoItem { get; set; }
 
     public override void _Ready()
     {
@@ -42,10 +42,11 @@ public partial class ItemInputCapture : Control
         }
 
         // Alt+RightClick: 从当前显示的 HoverTip 发送
-        if (@event is InputEventMouseButton
-            {
-                Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true
-            }) HandleAltRightClick();
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true })
+        {
+            HandleAltRightClick();
+            return;
+        }
     }
 
     private void HandleAltLeftClick()

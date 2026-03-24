@@ -1,3 +1,4 @@
+using System.Globalization;
 using Godot;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.SyncShop;
@@ -59,7 +60,7 @@ public class ShopProvider : IPlayerPanelProvider
         ArgumentNullException.ThrowIfNull(player);
         if (content is not VBoxContainer container) return;
 
-        ProviderUtils.ClearChildren(container);
+        UiUtils.ClearChildren(container);
 
         // 显示对方金币
         container.AddChild(CreateGoldRow(player));
@@ -131,7 +132,7 @@ public class ShopProvider : IPlayerPanelProvider
     public void Cleanup(Control content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ProviderUtils.ClearChildren(content);
+        UiUtils.ClearChildren(content);
     }
 
     #endregion
@@ -155,7 +156,7 @@ public class ShopProvider : IPlayerPanelProvider
 
         var goldLabel = new Label
         {
-            Text = player.Gold.ToString(),
+            Text = player.Gold.ToString(CultureInfo.InvariantCulture),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         goldLabel.AddThemeColorOverride("font_color", StsColors.gold);
@@ -324,7 +325,7 @@ public class ShopProvider : IPlayerPanelProvider
     {
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = CardTooltip.FromModel(card) };
-        ProviderUtils.SendToChat(segment);
+        PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);
         Log.Debug($"Sent card to chat: {card.Title}");
     }
 
@@ -332,7 +333,7 @@ public class ShopProvider : IPlayerPanelProvider
     {
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = RelicTooltip.FromModel(relic) };
-        ProviderUtils.SendToChat(segment);
+        PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);
         Log.Debug($"Sent relic to chat: {relic.Id.Entry}");
     }
 
@@ -340,7 +341,7 @@ public class ShopProvider : IPlayerPanelProvider
     {
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = PotionTooltip.FromModel(potion) };
-        ProviderUtils.SendToChat(segment);
+        PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);
         Log.Debug($"Sent potion to chat: {potion.Id.Entry}");
     }
 

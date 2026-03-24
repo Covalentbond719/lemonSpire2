@@ -53,17 +53,17 @@ public static class ItemInputHandler
                 case NPower { Model: { } pm }:
                     return CreatePowerSegment(pm);
 
-                case NCard { Model: { } card }:
+                case NCardHolder { CardModel: { } card }:
                     return CreateCardSegment(card);
 
-                case NCardHolder { CardModel: { } card }:
+                case NCard { Model: { } card }:
                     return CreateCardSegment(card);
 
                 case NPotionHolder { Potion: { } potion }:
                     return CreatePotionSegment(potion.Model);
 
                 case NPotion { Model: { } potion }:
-                    // 直接匹配 NPotion 节点，用于 NPlayerState.Panel.PotionProvider 创建的药水
+                    // 直接匹配 NPotion 节点，可用于 NPlayerState.Panel.PotionProvider 创建的药水
                     return CreatePotionSegment(potion);
 
                 case NRelicInventoryHolder { Relic.Model: { } relic }:

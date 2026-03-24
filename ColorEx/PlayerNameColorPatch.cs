@@ -20,6 +20,7 @@ public static class PlayerNameColorPatch
     [HarmonyPatch("_Ready")]
     public static void ReadyPostfix(NMultiplayerPlayerState __instance)
     {
+        ArgumentNullException.ThrowIfNull(__instance);
         var playerId = __instance.Player.NetId;
 
         // 创建颜色变更回调

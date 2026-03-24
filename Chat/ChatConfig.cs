@@ -34,6 +34,10 @@ public static class ChatConfig
     public const float FadeMinAlpha = 0.01f;
     public const float PanelBgAlpha = 0.80f;
 
+    // ========== Sound ==========
+    public const string MessageSoundPath = "res://lemonSpire2/receive-message.mp3";
+    public const float MessageSoundVolumeDb = -6f;
+
     // ========== Colors ==========
     // Panel
     public static readonly Color PanelBgColor = new(0f, 0f, 0f, PanelBgAlpha);

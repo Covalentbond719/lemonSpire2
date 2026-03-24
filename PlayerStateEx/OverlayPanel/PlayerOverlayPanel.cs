@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Platform;
+using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using DraggableTitleBar = lemonSpire2.util.Ui.DraggableTitleBar;
 using ViewportResizeNotifier = lemonSpire2.util.Ui.ViewportResizeNotifier;
@@ -23,16 +24,23 @@ public partial class PlayerOverlayPanel : Control
 {
     private const float MinContentHeight = 80f;
     private const float PanelWidth = 280f;
+    private const float HeightUpdateEpsilon = 0.5f;
+    private readonly HashSet<string> _pendingProviderUpdates = [];
     private readonly Dictionary<string, Control> _providerContents = [];
     private readonly List<Action> _unsubscribeActions = [];
 
     private VBoxContainer _contentContainer = null!;
     private DraggableTitleBar _header = null!;
     private Label _headerTitle = null!;
+    private float _lastAppliedTargetHeight = -1f;
     private VBoxContainer _mainContainer = null!;
+    private bool _needsLayoutUpdate = true;
 
     private bool _needsRefresh;
+    private Action<Vector2>? _onViewportResized;
+
     private PanelContainer _panel = null!;
+
 
     private Player? _player;
     private ScrollContainer _scrollContainer = null!;
@@ -42,7 +50,12 @@ public partial class PlayerOverlayPanel : Control
     {
         MouseFilter = MouseFilterEnum.Stop;
         CreateUi();
-        ViewportResizeNotifier.Instance.OnViewportResized += _ => PanelPositionHelper.ClampToViewport(_panel);
+        _onViewportResized = _ =>
+        {
+            _needsLayoutUpdate = true;
+            PanelPositionHelper.ClampToViewport(_panel);
+        };
+        ViewportResizeNotifier.Instance.OnViewportResized += _onViewportResized;
     }
 
     public override void _Process(double delta)
@@ -50,13 +63,14 @@ public partial class PlayerOverlayPanel : Control
         if (_needsRefresh)
         {
             _needsRefresh = false;
-            _panel.Size = Vector2.Zero;
-            _mainContainer.Size = Vector2.Zero;
-            _contentContainer.Size = Vector2.Zero;
+            _pendingProviderUpdates.Clear();
             RefreshAllProviders();
         }
 
-        // 每帧更新面板尺寸（很奇怪，call deferred 也不能正常刷新高度？？？）
+        if (!_needsRefresh && _pendingProviderUpdates.Count > 0)
+            FlushPendingProviderUpdates();
+
+        // 每帧检查尺寸目标；仅在目标变化时重算，避免每帧抖动
         UpdatePanelSize();
     }
 
@@ -125,12 +139,24 @@ public partial class PlayerOverlayPanel : Control
     /// </summary>
     private void UpdatePanelSize()
     {
-        var contentHeight = _contentContainer.GetMinimumSize().Y;
+        var contentHeight = _contentContainer.GetCombinedMinimumSize().Y;
         var maxHeight = GetMaxContentHeight();
         var targetHeight = Mathf.Clamp(contentHeight, MinContentHeight, maxHeight);
+        var shouldApplyHeight = _needsLayoutUpdate ||
+                                Mathf.Abs(targetHeight - _lastAppliedTargetHeight) > HeightUpdateEpsilon;
 
+        if (!shouldApplyHeight) return;
+
+        _needsLayoutUpdate = false;
+        _lastAppliedTargetHeight = targetHeight;
+
+        // Godot 容器在缩小时可能保留上一次布局结果，先归零再设置 min size 能确保及时收缩。
+        _panel.Size = Vector2.Zero;
         _mainContainer.Size = Vector2.Zero;
+        _scrollContainer.Size = Vector2.Zero;
+        _contentContainer.Size = Vector2.Zero;
         _scrollContainer.CustomMinimumSize = new Vector2(PanelWidth, targetHeight);
+        PanelPositionHelper.ClampToViewport(_panel);
     }
 
     private float GetMaxContentHeight()
@@ -147,6 +173,7 @@ public partial class PlayerOverlayPanel : Control
         PlayerPanelRegistry.Initialize();
 
         CombatManager.Instance.CombatSetUp += OnCombatSetUp;
+        CombatManager.Instance.CombatEnded += OnCombatEnded;
 
         RefreshAllProviders();
     }
@@ -157,7 +184,43 @@ public partial class PlayerOverlayPanel : Control
 
         ClearProviderContents();
         CreateProviderContents();
+        _needsLayoutUpdate = true;
+        _lastAppliedTargetHeight = -1f;
         PanelPositionHelper.ClampToViewport(_panel);
+    }
+
+    private void QueueProviderUpdate(string providerId)
+    {
+        if (string.IsNullOrEmpty(providerId) || _player == null) return;
+        _pendingProviderUpdates.Add(providerId);
+    }
+
+    private void FlushPendingProviderUpdates()
+    {
+        if (_player == null || _pendingProviderUpdates.Count == 0) return;
+
+        var pendingProviderIds = _pendingProviderUpdates.ToArray();
+        _pendingProviderUpdates.Clear();
+
+        foreach (var providerId in pendingProviderIds)
+        {
+            var provider = PlayerPanelRegistry.GetProvider(providerId);
+            if (provider == null) continue;
+
+            var shouldShow = provider.ShouldShow(_player);
+            var hasContent = _providerContents.ContainsKey(providerId);
+
+            if (shouldShow != hasContent)
+            {
+                _needsRefresh = true;
+                return;
+            }
+
+            if (shouldShow && _providerContents.TryGetValue(providerId, out var content))
+                provider.UpdateContent(_player, content);
+        }
+
+        _needsLayoutUpdate = true;
     }
 
     private void CreateProviderContents()
@@ -194,22 +257,11 @@ public partial class PlayerOverlayPanel : Control
 
             provider.UpdateContent(_player, content);
 
+            var providerId = provider.ProviderId;
             var unsubscribe = provider.SubscribeEvents(_player, () =>
             {
-                // 检查 ShouldShow 是否变化，如果变化则触发完整刷新
-                var shouldShow = provider.ShouldShow(_player);
-                var hasContent = _providerContents.ContainsKey(provider.ProviderId);
-
-                if (shouldShow != hasContent)
-                {
-                    // 可见性变化，需要重建所有 providers
-                    _needsRefresh = true;
-                    return;
-                }
-
-                // 可见性没变，只更新内容
-                if (shouldShow && _providerContents.TryGetValue(provider.ProviderId, out var c))
-                    provider.UpdateContent(_player, c);
+                // 事件可能在数据真正落地前触发；延迟到下一帧读取可避免“一拍慢”。
+                QueueProviderUpdate(providerId);
             });
             if (unsubscribe != null) _unsubscribeActions.Add(unsubscribe);
         }
@@ -234,16 +286,19 @@ public partial class PlayerOverlayPanel : Control
     {
         foreach (var unsubscribe in _unsubscribeActions) unsubscribe();
         _unsubscribeActions.Clear();
+        _pendingProviderUpdates.Clear();
 
         ShopManager.Instance.InventoryUpdated -= OnShopInventoryUpdated;
         CardRewardManager.Instance.RewardsUpdated -= OnRewardsUpdated;
 
-        foreach (var content in _providerContents.Values) content.QueueFree();
         _providerContents.Clear();
 
         if (_contentContainer == null) return;
         foreach (var child in _contentContainer.GetChildren())
+        {
+            _contentContainer.RemoveChild(child);
             child.QueueFree();
+        }
     }
 
     private void OnCloseButtonPressed()
@@ -254,14 +309,22 @@ public partial class PlayerOverlayPanel : Control
 
     public override void _ExitTree()
     {
-        ViewportResizeNotifier.Instance.OnViewportResized -= _ => PanelPositionHelper.ClampToViewport(_panel);
+        if (_onViewportResized != null)
+            ViewportResizeNotifier.Instance.OnViewportResized -= _onViewportResized;
         CombatManager.Instance.CombatSetUp -= OnCombatSetUp;
+        CombatManager.Instance.CombatEnded -= OnCombatEnded;
         ClearProviderContents();
     }
 
     private void OnCombatSetUp(CombatState _)
     {
         Log.Debug("CombatSetUp, refreshing");
+        _needsRefresh = true;
+    }
+
+    private void OnCombatEnded(CombatRoom _)
+    {
+        Log.Debug("CombatEnded, refreshing");
         _needsRefresh = true;
     }
 
