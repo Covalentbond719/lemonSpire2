@@ -26,10 +26,15 @@ public abstract class NetworkHandlerBase<TMessage> : IDisposable where TMessage 
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-        _netService.UnregisterMessageHandler<TMessage>(OnReceiveMessage);
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing) _netService.UnregisterMessageHandler<TMessage>(OnReceiveMessage);
+        _disposed = true;
     }
 
     /// <summary>

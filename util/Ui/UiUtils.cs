@@ -1,8 +1,6 @@
 using System.Reflection;
 using Godot;
 using lemonSpire2.Chat;
-using lemonSpire2.Chat.Intent;
-using lemonSpire2.Chat.Message;
 using MegaCrit.Sts2.Core.Nodes.Potions;
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
 
@@ -12,7 +10,7 @@ namespace lemonSpire2.util.Ui;
 ///     Provider 工具类
 ///     提供公共的工具方法，消除重复代码
 /// </summary>
-public static class ProviderUtils
+public static class UiUtils
 {
     private static Logger Log => ChatUiPatch.Log;
 
@@ -27,27 +25,6 @@ public static class ProviderUtils
             container.RemoveChild(child);
             child?.QueueFree();
         }
-    }
-
-    /// <summary>
-    ///     发送 TooltipSegment 到聊天
-    /// </summary>
-    public static void SendToChat(TooltipSegment segment)
-    {
-        ArgumentNullException.ThrowIfNull(segment);
-        var store = ChatStore.Instance;
-        if (store == null)
-        {
-            Log.Warn("ChatStore.Instance is null");
-            return;
-        }
-
-        store.Dispatch(new IntentSendSegments
-        {
-            ReceiverId = 0,
-            Segments = [segment]
-        });
-        Log.Info($"Sent to chat: {segment.Tooltip.Render()}");
     }
 
     /// <summary>

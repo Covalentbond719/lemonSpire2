@@ -2,6 +2,7 @@ using System.Reflection;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 
 namespace lemonSpire2.ColorEx;
@@ -19,6 +20,9 @@ public static class PlayerColorButtonPatch
     private static readonly FieldInfo? TopContainerField =
         typeof(NMultiplayerPlayerState).GetField("_topContainer", BindingFlags.NonPublic | BindingFlags.Instance);
 
+    public static string Title => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.title").GetFormattedText();
+    public static string Tooltip => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.tooltip").GetFormattedText();
+
     // 存储按钮引用，用于更新颜色显示
     private static readonly Dictionary<ulong, WeakReference<Button>> ColorButtons = new();
 
@@ -29,6 +33,7 @@ public static class PlayerColorButtonPatch
     [HarmonyPatch("_Ready")]
     public static void ReadyPostfix(NMultiplayerPlayerState __instance)
     {
+        ArgumentNullException.ThrowIfNull(__instance);
         // 只对本地玩家显示颜色按钮
         if (!LocalContext.IsMe(__instance.Player)) return;
 
@@ -70,7 +75,7 @@ public static class PlayerColorButtonPatch
         {
             Text = ColorPickerEmoji,
             CustomMinimumSize = new Vector2(32, 32),
-            TooltipText = "选择玩家颜色",
+            TooltipText = Tooltip,
             ZIndex = 100
         };
 
@@ -113,7 +118,7 @@ public static class PlayerColorButtonPatch
         // 创建弹窗颜色选择器
         var popup = new PopupPanel
         {
-            Title = "选择颜色",
+            Title = Title,
             Borderless = false
         };
 
@@ -136,12 +141,16 @@ public static class PlayerColorButtonPatch
         ));
 
         // 关闭时应用最终颜色
-        popup.CloseRequested += () =>
+        popup.PopupHide += SubmitColor;
+
+        return;
+
+        void SubmitColor()
         {
             var finalColor = colorPicker.Color;
             OnColorChanged(playerId, finalColor, button);
             popup.QueueFree();
-        };
+        }
     }
 
     private static void OnColorChanged(ulong playerId, Color color, Button button)

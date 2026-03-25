@@ -62,6 +62,7 @@ public static class RemoteCursorColorPatch
     [HarmonyPatch("_Ready")]
     public static void ReadyPostfix(NRemoteMouseCursor __instance)
     {
+        ArgumentNullException.ThrowIfNull(__instance);
         var playerId = __instance.PlayerId;
 
         // 创建颜色变更回调
@@ -88,6 +89,7 @@ public static class RemoteCursorColorPatch
     [HarmonyPatch("UpdateImage")]
     public static void UpdateImagePostfix(NRemoteMouseCursor __instance, bool isDown, DrawingMode drawingMode)
     {
+        ArgumentNullException.ThrowIfNull(__instance);
         var textureRect = __instance.GetNode<TextureRect>("TextureRect");
         if (textureRect == null) return;
 

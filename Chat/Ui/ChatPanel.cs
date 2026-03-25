@@ -3,6 +3,7 @@ using Godot;
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.ColorEx;
+using lemonSpire2.SendGameItem;
 using lemonSpire2.util.Ui;
 using MegaCrit.Sts2.Core.Localization;
 using DraggableTitleBar = lemonSpire2.util.Ui.DraggableTitleBar;
@@ -18,6 +19,7 @@ public sealed class ChatPanel : IDisposable
 {
     private readonly Action<IIntent> _dispatch;
     private readonly List<string> _inputHistory = [];
+    private readonly AudioStream? _messageSound;
     private readonly ChatModel _model;
     private readonly TooltipManager _tooltipManager = new();
     private readonly Control _tooltipParent;
@@ -43,6 +45,7 @@ public sealed class ChatPanel : IDisposable
         _model = model;
         _dispatch = dispatch;
         _tooltipParent = tooltipParent;
+        _messageSound = GD.Load<AudioStream>(ChatConfig.MessageSoundPath);
         _model.OnMessageAppended += OnMessageAppended;
         _tooltipManager.RegisterHandlers(intentRegistry);
         CreateUi();
@@ -266,6 +269,7 @@ public sealed class ChatPanel : IDisposable
             _hasWelcome = false;
         }
 
+        PlayMessageSound();
         DelayFadeOut(ChatConfig.FadeOutDelaySeconds);
 
         var senderName = message.SenderName ?? $"Player {message.SenderId}";
@@ -292,6 +296,23 @@ public sealed class ChatPanel : IDisposable
     private void RenderSegment(IMsgSegment segment)
     {
         segment.RenderTo(_messageBuffer);
+    }
+
+    private void PlayMessageSound()
+    {
+        if (_messageSound == null || !_container.IsInsideTree())
+            return;
+
+#pragma warning disable CA2000 // AudioStreamPlayer ownership transferred to scene tree and auto-freed after playback
+        var player = new AudioStreamPlayer
+        {
+            Stream = _messageSound,
+            VolumeDb = ChatConfig.MessageSoundVolumeDb
+        };
+#pragma warning restore CA2000
+        _container.AddChild(player);
+        player.Play();
+        player.Finished += player.QueueFree;
     }
 
     #region Ui Base
@@ -431,6 +452,9 @@ public sealed class ChatPanel : IDisposable
 
         // 订阅窗口大小变化事件
         ViewportResizeNotifier.Instance.OnViewportResized += OnViewportResized;
+
+        // 注册到 InputCapture，让其放过 ChatPanel 内部的 Alt+Click
+        ItemInputCapture.RegisterBlockingControl(_container);
     }
 
     private void OnViewportResized(Vector2 _)

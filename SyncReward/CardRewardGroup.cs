@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
 namespace lemonSpire2.SyncReward;
@@ -9,7 +10,7 @@ public record CardRewardGroup
 {
     public string GroupId { get; set; } = "";
     public CardRewardSourceType Source { get; set; }
-    public List<CardEntry> Cards { get; set; } = [];
+    public Collection<CardEntry> Cards { get; set; } = [];
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
 
     public void Serialize(PacketWriter writer)

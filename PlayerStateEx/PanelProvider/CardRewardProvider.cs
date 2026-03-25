@@ -24,7 +24,7 @@ public class CardRewardProvider : IPlayerPanelProvider
 
     #region Event Handlers
 
-    private static void OnCardClicked(CardModel card)
+    private static void OnCardClicked(Player player, CardModel card)
     {
         if (!Input.IsKeyPressed(Key.Alt)) return;
 
@@ -32,7 +32,7 @@ public class CardRewardProvider : IPlayerPanelProvider
         {
             Tooltip = CardTooltip.FromModel(card)
         };
-        ProviderUtils.SendToChat(segment);
+        PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.cardRewardShare", segment);
         Log.Debug($"Sent card to chat: {card.Title}");
     }
 
@@ -68,18 +68,12 @@ public class CardRewardProvider : IPlayerPanelProvider
         if (content is not VBoxContainer container) return;
 
         // 清除现有内容
-        ProviderUtils.ClearChildren(container);
+        UiUtils.ClearChildren(container);
 
         var groups = CardRewardManager.Instance.GetGroups(player.NetId);
         if (groups.Count == 0)
         {
-            var emptyLabel = new Label
-            {
-                Text = new LocString("gameplay_ui", "LEMONSPIRE.cardRewards.empty").GetFormattedText(),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            emptyLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
-            container.AddChild(emptyLabel);
+            Log.Error($"Should not happen! at least one reward in every combat, got 0 in player {player.NetId}");
             return;
         }
 
@@ -92,7 +86,7 @@ public class CardRewardProvider : IPlayerPanelProvider
         Log.Debug($"Updated content for player {player.NetId}: {groups.Count} groups");
     }
 
-    public Action? SubscribeEvents(Player player, Action onUpdate)
+    public Action SubscribeEvents(Player player, Action onUpdate)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(onUpdate);
@@ -109,7 +103,7 @@ public class CardRewardProvider : IPlayerPanelProvider
     public void Cleanup(Control content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ProviderUtils.ClearChildren(content);
+        UiUtils.ClearChildren(content);
     }
 
     #endregion
@@ -206,10 +200,10 @@ public class CardRewardProvider : IPlayerPanelProvider
 
         // 订阅点击事件
         entry.Connect(NDeckHistoryEntry.SignalName.Clicked,
-            Callable.From<NDeckHistoryEntry>(_ => OnCardClicked(card)));
+            Callable.From<NDeckHistoryEntry>(_ => OnCardClicked(player, card)));
 
         // 添加悬浮提示
-        CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Right);
+        CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Left);
 
         return entry;
     }

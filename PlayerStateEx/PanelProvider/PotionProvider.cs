@@ -23,7 +23,7 @@ public class PotionProvider : IPlayerPanelProvider
 
     #region Event Handlers
 
-    private static void OnPotionHolderReleased(NPotionHolder holder, PotionModel potion)
+    private static void OnPotionHolderReleased(Player player, NPotionHolder holder, PotionModel potion)
     {
         Log.Debug($"PotionHolder released: {potion.Id.Entry}, Alt={Input.IsKeyPressed(Key.Alt)}");
 
@@ -34,7 +34,7 @@ public class PotionProvider : IPlayerPanelProvider
             {
                 Tooltip = PotionTooltip.FromModel(potion)
             };
-            ProviderUtils.SendToChat(segment);
+            PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.potionShare", segment);
         }
         // 普通点击：不处理（holder 创建时 isUsable=false，不会打开使用弹窗）
     }
@@ -75,7 +75,7 @@ public class PotionProvider : IPlayerPanelProvider
         if (content is not HBoxContainer container) return;
 
         // 清除现有内容
-        ProviderUtils.ClearChildren(container);
+        UiUtils.ClearChildren(container);
 
         Log.Debug($"Updating content, player has {player.Potions.Count()} potions");
 
@@ -94,15 +94,24 @@ public class PotionProvider : IPlayerPanelProvider
 
             // 订阅点击事件，支持 Alt+Click 发送药水到聊天
             holder.Connect(NClickableControl.SignalName.Released,
-                Callable.From(() => OnPotionHolderReleased(holder, potion)));
+                Callable.From<Variant>(_ => OnPotionHolderReleased(player, holder, potion)));
 
             container.AddChild(holder);
             holder.AddPotion(nPotion);
             nPotion.Position = Vector2.Zero; // 关键：重置位置，否则会出现偏移
-            ProviderUtils.SetPotionScale(holder, PotionScale);
+            UiUtils.SetPotionScale(holder, PotionScale);
             nPotion.Scale = Vector2.One * PotionScale;
-            // 关键：设置 holder 的最小尺寸为缩小后的大小，否则 holder 仍占用原始大小
-            holder.CustomMinimumSize = nPotion.Size * PotionScale;
+            // Use the larger of current Size and minimum size to avoid one-frame lag and zero-size edge cases.
+            var potionSize = nPotion.Size;
+            var potionMinSize = nPotion.GetMinimumSize();
+            var baseSize = new Vector2(
+                Mathf.Max(potionSize.X, potionMinSize.X),
+                Mathf.Max(potionSize.Y, potionMinSize.Y)
+            );
+            if (baseSize.X <= 0f || baseSize.Y <= 0f)
+                baseSize = new Vector2(48f, 48f);
+
+            holder.CustomMinimumSize = baseSize * PotionScale;
 
             Log.Debug($"Added potion {potion.Id.Entry} to holder, MouseFilter={holder.MouseFilter}");
         }
@@ -137,7 +146,7 @@ public class PotionProvider : IPlayerPanelProvider
     public void Cleanup(Control content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ProviderUtils.ClearChildren(content);
+        UiUtils.ClearChildren(content);
     }
 
     #endregion

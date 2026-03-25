@@ -34,12 +34,12 @@ public class HandCardProvider : IPlayerPanelProvider
         if (Input.IsKeyPressed(Key.Alt))
         {
             // Alt+Click: 发送卡牌到聊天
-            var segment = new TooltipSegment
+            var tooltip = new TooltipSegment
             {
                 Tooltip = CardTooltip.FromModel(card)
             };
 
-            ProviderUtils.SendToChat(segment);
+            PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.handCardShare", tooltip);
         }
         else
         {
@@ -91,7 +91,7 @@ public class HandCardProvider : IPlayerPanelProvider
         }
 
         // 清除现有内容
-        ProviderUtils.ClearChildren(container);
+        UiUtils.ClearChildren(container);
 
         // 添加手牌数量显示
         var cardCount = hand.Cards.Count;
@@ -117,7 +117,7 @@ public class HandCardProvider : IPlayerPanelProvider
             entry.Connect(NDeckHistoryEntry.SignalName.Clicked,
                 Callable.From<NDeckHistoryEntry>(e => OnEntryClicked(e.Card, player)));
 
-            CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Right);
+            CardHoverTipHelper.BindCardHoverTip(entry, () => card, HoverTipAlignment.Left);
 
             container.AddChild(entry);
         }
@@ -141,7 +141,7 @@ public class HandCardProvider : IPlayerPanelProvider
     public void Cleanup(Control content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        ProviderUtils.ClearChildren(content);
+        UiUtils.ClearChildren(content);
     }
 
     #endregion
