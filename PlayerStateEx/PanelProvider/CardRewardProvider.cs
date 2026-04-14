@@ -208,7 +208,11 @@ public class CardRewardProvider : IPlayerPanelProvider
 
         // 应用升级等级
         if (cardEntry.UpgradeLevel > 0 && card.CurrentUpgradeLevel < cardEntry.UpgradeLevel)
+        {
             card = card.ToMutable();
+            card._currentUpgradeLevel = cardEntry.UpgradeLevel;
+        }
+
 
         var entry = NDeckHistoryEntry.Create(card, 1);
 
