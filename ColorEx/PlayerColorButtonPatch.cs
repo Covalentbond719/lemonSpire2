@@ -1,9 +1,11 @@
 using System.Reflection;
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
+using MegaCrit.Sts2.Core.Rooms;
 
 namespace lemonSpire2.ColorEx;
 
@@ -20,14 +22,14 @@ public static class PlayerColorButtonPatch
     private static readonly FieldInfo? TopContainerField =
         typeof(NMultiplayerPlayerState).GetField("_topContainer", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    public static string Title => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.title").GetFormattedText();
-    public static string Tooltip => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.tooltip").GetFormattedText();
-
     // 存储按钮引用，用于更新颜色显示
     private static readonly Dictionary<ulong, WeakReference<Button>> ColorButtons = new();
 
     // 是否已订阅颜色变更事件
     private static bool _subscribedToColorChange;
+
+    public static string Title => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.title").GetFormattedText();
+    public static string Tooltip => new LocString("gameplay_ui", "LEMONSPIRE.color_picker.tooltip").GetFormattedText();
 
     [HarmonyPostfix]
     [HarmonyPatch("_Ready")]
@@ -58,6 +60,7 @@ public static class PlayerColorButtonPatch
 
         // 注册按钮引用
         ColorButtons[playerId] = new WeakReference<Button>(colorButton);
+        UpdateButtonVisibility(playerId);
 
         // 只订阅一次颜色变更事件
         if (!_subscribedToColorChange)
@@ -67,6 +70,24 @@ public static class PlayerColorButtonPatch
         }
 
         ColorManager.Log.Debug($"ColorButton added for player {playerId}");
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch("OnCombatSetUp")]
+    public static void OnCombatSetUpPostfix(NMultiplayerPlayerState __instance, CombatState _)
+    {
+        ArgumentNullException.ThrowIfNull(__instance);
+        if (!LocalContext.IsMe(__instance.Player)) return;
+        UpdateButtonVisibility(__instance.Player.NetId);
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch("OnCombatEnded")]
+    public static void OnCombatEndedPostfix(NMultiplayerPlayerState __instance, CombatRoom _)
+    {
+        ArgumentNullException.ThrowIfNull(__instance);
+        if (!LocalContext.IsMe(__instance.Player)) return;
+        UpdateButtonVisibility(__instance.Player.NetId);
     }
 
     private static Button CreateColorButton(ulong playerId)
@@ -174,5 +195,15 @@ public static class PlayerColorButtonPatch
             weakRef.TryGetTarget(out var button) &&
             GodotObject.IsInstanceValid(button))
             UpdateButtonStyle(button, color);
+    }
+
+    private static void UpdateButtonVisibility(ulong playerId)
+    {
+        if (!ColorButtons.TryGetValue(playerId, out var weakRef) ||
+            !weakRef.TryGetTarget(out var button) ||
+            !GodotObject.IsInstanceValid(button))
+            return;
+
+        button.Visible = !CombatManager.Instance.IsInProgress;
     }
 }

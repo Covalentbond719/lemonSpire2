@@ -1,0 +1,12 @@
+{
+  "LEMONSPIRE2.mod_title": "Lemon Spire 2",
+  "LEMONSPIRE2-FEATURE_FLAGS.title": "功能开关",
+  "LEMONSPIRE2-ENABLE_QO_L.title": "启用多人 QoL",
+  "LEMONSPIRE2-ENABLE_CHAT.title": "启用聊天",
+  "LEMONSPIRE2-ENABLE_SYNERGY_INDICATOR.title": "启用多人连携指示器（易伤、虚弱、多人牌提示）",
+  "LEMONSPIRE2-ENABLE_STATS_TRACKER.title": "启用伤害追踪",
+  "LEMONSPIRE2-ENABLE_SYNC.title": "启用额外同步",
+  "LEMONSPIRE2-ENABLE_PLAYER_COLOR.title": "启用玩家颜色",
+  "LEMONSPIRE2-PANEL_FLAGS.title": "面板行为",
+  "LEMONSPIRE2-GROUP_HAND_CARDS.title": "合并显示手牌"
+}

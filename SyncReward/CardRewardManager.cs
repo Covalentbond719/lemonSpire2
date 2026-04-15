@@ -11,11 +11,6 @@ namespace lemonSpire2.SyncReward;
 public class CardRewardManager
 {
     /// <summary>
-    ///     每个玩家最多保留的奖励组数量
-    /// </summary>
-    private const int MaxGroupsPerPlayer = 5;
-
-    /// <summary>
     ///     玩家 NetId -> 奖励组列表
     /// </summary>
     private readonly ConcurrentDictionary<ulong, Collection<CardRewardGroup>> _playerRewards = new();
@@ -41,9 +36,6 @@ public class CardRewardManager
         ArgumentNullException.ThrowIfNull(group);
         var groups = _playerRewards.GetOrAdd(playerNetId, _ => []);
         groups.Add(group);
-
-        // 保持最多 MaxGroupsPerPlayer 个组
-        while (groups.Count > MaxGroupsPerPlayer) groups.RemoveAt(0);
 
         Log.Debug($"AddGroup: player={playerNetId}, groupId={group.GroupId}, cards={group.Cards.Count}");
         RewardsUpdated?.Invoke(playerNetId);
