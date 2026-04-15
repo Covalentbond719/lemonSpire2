@@ -194,11 +194,10 @@ public static class ItemInputHandler
 
     private static TooltipSegment CreateTargetSegment(Creature entity)
     {
-        // Use a power tooltip as placeholder for creature display
-        var tooltip = new PowerTooltip
+        var tooltip = new RichTextTooltip
         {
-            PowerIdStr = "creature",
-            Amount = 0
+            Title = entity.Name,
+            Description = $"{entity.CurrentHp}/{entity.MaxHp}"
         };
         return new TooltipSegment
         {

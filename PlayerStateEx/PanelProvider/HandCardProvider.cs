@@ -105,13 +105,16 @@ public class HandCardProvider : IPlayerPanelProvider
         countLabel.AddThemeFontSizeOverride("font_size", 16);
         container.AddChild(countLabel);
 
-        // 分组：相同卡牌合并显示
-        var groups = CardUtils.GroupCards(hand.Cards);
+        var groupCards = LemonSpireConfig.GroupHandCards;
+        var groups = groupCards
+            ? CardUtils.GroupCards(hand.Cards).Select(static group => group.AsEnumerable())
+            : hand.Cards.Select(static card => new[] { card }.AsEnumerable());
 
         foreach (var group in groups)
         {
-            var card = group.First();
-            var count = group.Count();
+            var cardModels = group as CardModel[] ?? [.. group];
+            var card = cardModels.First();
+            var count = groupCards ? cardModels.Length : 1;
             var entry = NDeckHistoryEntry.Create(card, count);
 
             entry.Connect(NDeckHistoryEntry.SignalName.Clicked,
@@ -134,8 +137,37 @@ public class HandCardProvider : IPlayerPanelProvider
             return null;
         }
 
+        var creature = player.Creature;
+
         hand.ContentsChanged += onUpdate;
-        return () => hand.ContentsChanged -= onUpdate;
+        creature.PowerApplied += OnPowerChanged;
+        creature.PowerIncreased += OnPowerIncreased;
+        creature.PowerDecreased += OnPowerDecreased;
+        creature.PowerRemoved += OnPowerChanged;
+
+        return () =>
+        {
+            hand.ContentsChanged -= onUpdate;
+            creature.PowerApplied -= OnPowerChanged;
+            creature.PowerIncreased -= OnPowerIncreased;
+            creature.PowerDecreased -= OnPowerDecreased;
+            creature.PowerRemoved -= OnPowerChanged;
+        };
+
+        void OnPowerChanged(PowerModel _)
+        {
+            onUpdate();
+        }
+
+        void OnPowerIncreased(PowerModel _, int __, bool ___)
+        {
+            onUpdate();
+        }
+
+        void OnPowerDecreased(PowerModel _, bool __)
+        {
+            onUpdate();
+        }
     }
 
     public void Cleanup(Control content)

@@ -358,7 +358,7 @@ public sealed class ChatPanel : IDisposable
         // 样式：背景色 + padding
         var titleStyle = new StyleBoxFlat
         {
-            BgColor = new Color(0.3f, 0.5f, 0.3f, 0.5f), // 半透明绿色便于调试
+            BgColor = new Color(0.3f, 0.5f, 0.3f, 0.5f), // 绿色
             ContentMarginLeft = 8,
             ContentMarginRight = 8,
             ContentMarginTop = 4,

@@ -1,3 +1,4 @@
+using BaseLib.Config;
 using Godot;
 using HarmonyLib;
 using lemonSpire2.Chat;
@@ -23,14 +24,17 @@ public partial class MainFile : Node
 
     public static void Initialize()
     {
+        ModConfigRegistry.Register(ModId, new LemonSpireConfig());
+
         // 设置日志级别为 Debug，启用所有模块的调试日志
         SetupLogLevels();
 
         Harmony harmony = new(ModId);
 
-        if (EnableQoL) harmony.CreateClassProcessor(typeof(NMultiplayerPlayerExpandedStatePatch)).Patch();
+        if (LemonSpireConfig.EnableQoL)
+            harmony.CreateClassProcessor(typeof(NMultiplayerPlayerExpandedStatePatch)).Patch();
 
-        if (EnableChat)
+        if (LemonSpireConfig.EnableChat)
         {
             harmony.CreateClassProcessor(typeof(ChatUiPatch)).Patch();
             harmony.CreateClassProcessor(typeof(ChatUiCleanupPatch)).Patch();
@@ -38,20 +42,20 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(ItemInputCaptureCleanupPatch)).Patch();
         }
 
-        if (EnableSynergyIndicator)
+        if (LemonSpireConfig.EnableSynergyIndicator)
         {
             harmony.CreateClassProcessor(typeof(SynergyIndicatorPatch)).Patch();
             harmony.CreateClassProcessor(typeof(SynergyIndicatorNetworkPatch)).Patch();
         }
 
-        if (EnableStatsTracker)
+        if (LemonSpireConfig.EnableStatsTracker)
         {
             harmony.CreateClassProcessor(typeof(PowerCmdPatch)).Patch();
             StatsTrackerManager.Instance.Initialize();
             PlayerTooltipRegistry.Register(new StatsTooltipProvider());
         }
 
-        if (EnableSync)
+        if (LemonSpireConfig.EnableSync)
         {
             harmony.CreateClassProcessor(typeof(ShopNetworkInitPatch)).Patch();
             harmony.CreateClassProcessor(typeof(ShopRoomPatch)).Patch();
@@ -60,7 +64,7 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(RunManagerPatch)).Patch();
         }
 
-        if (EnablePlayerColor)
+        if (LemonSpireConfig.EnablePlayerColor)
         {
             harmony.CreateClassProcessor(typeof(PlayerNameColorPatch)).Patch();
             harmony.CreateClassProcessor(typeof(MapDrawColorPatch)).Patch();
@@ -79,29 +83,4 @@ public partial class MainFile : Node
     {
         Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
     }
-
-    #region Feature Flags
-
-    /// <summary>
-    ///     Multiplayer QoL System:
-    /// </summary>
-    public static bool EnableQoL { get; set; } = true;
-
-    /// <summary> Multiplayer Chat System</summary>
-    public static bool EnableChat { get; set; } = true;
-
-
-    /// <summary> Allies Support Indicator </summary>
-    public static bool EnableSynergyIndicator { get; set; } = true;
-
-    /// <summary> Stastics Tracker </summary>
-    public static bool EnableStatsTracker { get; set; } = true;
-
-    /// <summary> Extra Sync </summary>
-    public static bool EnableSync { get; set; } = true;
-
-    /// <summary> Player Color Management </summary>
-    public static bool EnablePlayerColor { get; set; } = true;
-
-    #endregion
 }

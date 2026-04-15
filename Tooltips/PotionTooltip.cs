@@ -1,6 +1,5 @@
 using Godot;
 using lemonSpire2.util;
-using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Potions;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
@@ -67,9 +66,8 @@ public sealed class PotionTooltip : Tooltip
         var model = ResolveModel();
         if (model is null) return null;
 
-        // Use ImagePath for icon since PotionModel doesn't have Icon property
-        var icon = PreloadManager.Cache.GetCompressedTexture2D(model.ImagePath);
-        return BuildHoverTipControl(model.HoverTip, icon);
+        // Potion atlas resources are regular textures; using model.Image is stable across locales.
+        return BuildHoverTipControl(model.HoverTip, model.Image);
     }
 
     public override IHoverTip ToHoverTip()
