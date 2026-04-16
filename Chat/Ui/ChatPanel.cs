@@ -336,8 +336,9 @@ public sealed class ChatPanel : IDisposable
             return false;
 
         _messageBuffer.PushColor(ChatConfig.TimeColor);
-        _messageBuffer.AppendText($"[{textDisplay.HeaderText}]: ");
+        _messageBuffer.AppendText($"[{textDisplay.HeaderText}]");
         _messageBuffer.Pop();
+        _messageBuffer.AppendText("\n");
         _messageBuffer.AppendText(textDisplay.Render());
         return true;
     }
@@ -565,7 +566,7 @@ public sealed class ChatPanel : IDisposable
         }
 
         var text = _inputField.Text;
-        if (!_inputServices.CompletionLeaderRegistry.TryMatch(text, _inputField.CaretColumn, out var session))
+        if (!_inputServices.CompletionAnalyzer.TryAnalyze(text, _inputField.CaretColumn, out var session))
         {
             _completionPopup.Hide();
             return;

@@ -30,6 +30,7 @@ public sealed class ChatInputSubmitParser(ChatSubmitTokenHandlerRegistry tokenHa
         var cursor = 0;
         while (cursor < text.Length)
         {
+            // 先跳到下一个可能触发特殊语义的位置，普通文本统一累积到 plainText。
             var relativeIndex = text.AsSpan(cursor).IndexOfAny(searchValues);
             if (relativeIndex < 0)
             {
@@ -42,6 +43,7 @@ public sealed class ChatInputSubmitParser(ChatSubmitTokenHandlerRegistry tokenHa
 
             if (tokenHandlers.TryParse(text, tokenIndex, out var segment, out var consumedLength))
             {
+                // 只有 handler 明确吃掉整段语法时，前面的 plainText 才会被冲刷成独立 segment。
                 FlushPlainText(segments, plainText);
                 segments.Add(segment);
                 cursor = tokenIndex + consumedLength;

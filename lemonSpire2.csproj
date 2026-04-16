@@ -97,17 +97,15 @@
         <None Include="project.godot"/>
         <None Include="export_presets.cfg"/>
         <None Include="lemonSpire2/**"/>
+        <None Include="*.md"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
     </ItemGroup>
 
-
-    <ItemGroup>
-        <Content Include="AGENTS.md"/>
-        <Content Include="Directory.Build.props"/>
-        <Content Include="*.md"/>
+    <ItemGroup Condition="True">
+        <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false"/>
     </ItemGroup>
 
     <Target Name="CheckDependencyPaths">

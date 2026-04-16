@@ -19,7 +19,7 @@ public sealed class CardInlineReferenceType : IChatInlineReferenceType
                 .Where(card => Matches(card, query))
                 .OrderBy(card => card.Id.Entry, StringComparer.OrdinalIgnoreCase)
                 .Take(20)
-                .Select(card => new ChatCompletionItem($"{card.Title} - {card.Id.Entry}", $"[card:{card.Id.Entry}]"))
+                .Select(card => new ChatCompletionItem($"{card.Title} - {card.Id.Entry}", $"<card:{card.Id.Entry}>"))
         ];
     }
 

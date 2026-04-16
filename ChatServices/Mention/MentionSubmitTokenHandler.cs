@@ -20,7 +20,8 @@ public sealed class MentionSubmitTokenHandler(Func<IReadOnlyList<MentionTarget>>
             return false;
 
         var endIndex = startIndex + 1;
-        while (endIndex < text.Length && !char.IsWhiteSpace(text[endIndex]) && text[endIndex] != '[')
+        // mention 的词法边界故意只看空白和 inline-ref 起点；其余标点保持交给 alias 文本自己处理。
+        while (endIndex < text.Length && !char.IsWhiteSpace(text[endIndex]) && text[endIndex] != '<')
             endIndex++;
 
         if (endIndex <= startIndex + 1)
@@ -31,6 +32,7 @@ public sealed class MentionSubmitTokenHandler(Func<IReadOnlyList<MentionTarget>>
             .Where(target => string.Equals(target.MentionText, name, StringComparison.Ordinal))
             .Take(2)
             .ToList();
+        // submit 阶段要求唯一命中；模糊匹配只存在于 completion，不存在于最终解析。
         if (matches.Count != 1)
             return false;
 

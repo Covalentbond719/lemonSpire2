@@ -12,9 +12,10 @@ public sealed class InlineReferenceCompletionProvider(ChatInlineReferenceRegistr
         ArgumentNullException.ThrowIfNull(query);
         var colonIndex = query.IndexOf(':');
         if (colonIndex < 0)
+            // `<card:` 这一层先补“类型名”；选中后再由具体类型 provider 接管 payload completion。
             return inlineReferences.All
                 .Where(type => type.TypeName.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Select(type => new ChatCompletionItem(type.TypeName, $"[{type.TypeName}:"))
+                .Select(type => new ChatCompletionItem(type.TypeName, $"<{type.TypeName}:"))
                 .ToList();
 
         var typeName = query[..colonIndex];

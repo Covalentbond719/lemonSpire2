@@ -14,7 +14,8 @@ public sealed class BracketSubmitTokenHandler(ChatInlineReferenceRegistry inline
         segment = null!;
         length = 0;
 
-        var endIndex = text.IndexOf('>', startIndex);
+        var closingChar = '>';
+        var endIndex = text.IndexOf(closingChar, startIndex);
         if (endIndex < 0)
             return false;
 
@@ -23,6 +24,7 @@ public sealed class BracketSubmitTokenHandler(ChatInlineReferenceRegistry inline
         if (separatorIndex <= 0 || separatorIndex >= body.Length - 1)
             return false;
 
+        // 这里 submit 阶段只做“type + payload”的分发，真正把 payload 解释成 segment 的责任留给具体类型。
         if (!inlineReferences.TryGet(body[..separatorIndex], out var referenceType) || referenceType is null)
             return false;
 

@@ -34,7 +34,7 @@ public sealed class ChatInputSubmitParserTests
         tokenHandlers.Register(new BracketSubmitTokenHandler(inlineRegistry));
         var parser = new ChatInputSubmitParser(tokenHandlers);
 
-        var result = parser.Parse("看这个 @Alice [card:CLASH]");
+        var result = parser.Parse("看这个 @Alice <card:CLASH>");
 
         var composition = result;
         Assert.Collection(composition,
@@ -91,7 +91,7 @@ public sealed class ChatInputSubmitParserTests
     {
         return
         [
-            new MentionTarget(displayName, () => new EntitySegment
+            new MentionTarget(displayName, playerNetId, () => new EntitySegment
             {
                 Kind = EntitySegment.EntityKind.Player,
                 DisplayNameKind = EntitySegment.NameKind.Plain,
@@ -110,7 +110,7 @@ public sealed class ChatInputSubmitParserTests
         {
             return
             [
-                new ChatCompletionItem($"{query}-display", $"[{typeName}:{query}]")
+                new ChatCompletionItem($"{query}-display", $"<{typeName}:{query}>")
             ];
         }
 

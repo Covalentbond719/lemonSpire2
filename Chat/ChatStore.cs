@@ -1,4 +1,5 @@
 using lemonSpire2.Chat.Input;
+using lemonSpire2.Chat.Input.Command;
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.util;
@@ -24,6 +25,15 @@ public class ChatStore
         IntentRegistry.Register<IntentTextSubmit>(i =>
         {
             var text = BbCodeUtils.AutoCloseUnclosedTags(i.Text);
+
+            // Slash 命令在本地先消费；只有明确判定“不是命令”时，才继续走普通聊天解析。
+            var commandResult = InputServices.CommandProcessor.Process(text);
+            if (commandResult is not NotAChatCmdResult)
+            {
+                HandleCommandResult(commandResult);
+                return true;
+            }
+
             var result = InputServices.Parser.Parse(text);
 
             Dispatch(new IntentSendSegments
@@ -84,6 +94,60 @@ public class ChatStore
     {
         // 先去注册表里找有没有人能处理这个 Intent
         return IntentRegistry.TryHandle(intent);
+    }
+
+    private void HandleCommandResult(ChatCmdResult result)
+    {
+        switch (result)
+        {
+            // 纯本地反馈：例如 /help、参数错误等，直接回灌到聊天模型，不发网。
+            case LocalDisplayChatCmdResult display:
+                AppendLocalSystemMessage(display.HeaderText, display.Text);
+                return;
+            case ErrorChatCmdResult error:
+                AppendLocalSystemMessage(error.HeaderText, error.Message);
+                return;
+            // 命令执行产出了“像普通消息一样发送的 segment”，这里复用现有发送链路。
+            case SendSegmentsChatCmdResult send:
+                foreach (var message in send.Messages)
+                    Dispatch(new IntentSendSegments
+                    {
+                        ReceiverId = message.ReceiverId,
+                        Segments = message.Segments
+                    });
+                return;
+            case NotAChatCmdResult:
+                return;
+            default:
+                throw new InvalidOperationException($"Unknown chat command result type: {result.GetType().FullName}");
+        }
+    }
+
+    private void AppendLocalSystemMessage(string headerText, string text)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(headerText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        // 这里故意走 IntentReceiveMessage 而不是 SendMessage：
+        // 系统消息只显示给本地，不进入网络层，也不触发发送者回显逻辑。
+        Dispatch(new IntentReceiveMessage
+        {
+            Message = new ChatMessage
+            {
+                SenderId = 0,
+                SenderName = headerText,
+                ReceiverId = LocalNetId,
+                Timestamp = DateTimeOffset.UtcNow,
+                Segments =
+                [
+                    new TextDisplaySegment
+                    {
+                        HeaderText = headerText,
+                        Text = text
+                    }
+                ]
+            }
+        });
     }
 
     private void OnSendMessage(ChatMessage message)
