@@ -23,33 +23,23 @@ public static class DefaultChatCmds
         registry.Register(new ChatCmdSpec
         {
             Name = "about",
-            Description = "Show information about lemonSpire2.",
+            Description = ChatCmdText.AboutDescription(),
             Args = [],
-            Execute = _ => new LocalDisplayChatCmdResult(
-                """
-                lemonSpire2 is a mod for Chat Panel, item send and other awesome multiplayer communication features.
-
-                GitHub: https://www.github.com/freude916/lemonSpire2/
-
-                This mod is open-source and free to use.
-                If you like it, please consider starring the GitHub repo and sharing it with your friends!
-                Please sponsor me! JK... unless? (Wait, I don't even have a Patreon lol)
-                """
-            )
+            Execute = _ => new LocalDisplayChatCmdResult(ChatCmdText.AboutBody(), ChatCmdText.SystemHeader())
         });
 
         registry.Register(new ChatCmdSpec
         {
             Name = "ping",
-            Description = "Local connectivity sanity check.",
+            Description = ChatCmdText.PingDescription(),
             Args = [],
-            Execute = _ => new LocalDisplayChatCmdResult("pong")
+            Execute = _ => new LocalDisplayChatCmdResult(ChatCmdText.PingResponse(), ChatCmdText.SystemHeader())
         });
 
         registry.Register(new ChatCmdSpec
         {
             Name = "help",
-            Description = "Show help for chat commands.",
+            Description = ChatCmdText.HelpDescription(),
             Args =
             [
                 new ChatCmdArgSpec("command", commandNameType, IsOptional: true)
@@ -60,21 +50,23 @@ public static class DefaultChatCmds
                 if (string.IsNullOrWhiteSpace(commandName))
                 {
                     // 不传命令名时，help 退化成“列出当前注册的所有命令签名”。
-                    var lines = registry.All.Select(static command => $"{command.Usage} - {command.Description}");
-                    return new LocalDisplayChatCmdResult(string.Join('\n', lines));
+                    var lines = registry.All.Select(command =>
+                        ChatCmdText.HelpListEntry(command.Usage, command.Description));
+                    return new LocalDisplayChatCmdResult(string.Join('\n', lines), ChatCmdText.SystemHeader());
                 }
 
                 registry.TryGet(commandName, out var command);
                 return command is null
-                    ? new ErrorChatCmdResult($"Unknown command '{commandName}'.")
-                    : new LocalDisplayChatCmdResult($"{command.Usage}\n{command.Description}");
+                    ? new ErrorChatCmdResult(ChatCmdText.UnknownCommand(commandName), ChatCmdText.SystemHeader())
+                    : new LocalDisplayChatCmdResult($"{command.Usage}\n{command.Description}",
+                        ChatCmdText.SystemHeader());
             }
         });
 
         registry.Register(new ChatCmdSpec
         {
             Name = "w",
-            Description = "Whisper to a player.",
+            Description = ChatCmdText.WhisperDescription(),
             Args =
             [
                 new ChatCmdArgSpec("player", new PlayerMentionChatArgumentType(getMentionTargets)),

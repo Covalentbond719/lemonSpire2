@@ -1,3 +1,4 @@
+using lemonSpire2.Chat.Input.Command;
 using lemonSpire2.Chat.Input.Model;
 
 namespace lemonSpire2.Chat.Input.Arguments;
@@ -15,7 +16,7 @@ public sealed class PlayerMentionChatArgumentType(Func<IReadOnlyList<MentionTarg
 
         if (!token.StartsWith('@'))
         {
-            error = "Player arguments must use @mention syntax.";
+            error = ChatCmdText.PlayerArgumentMustUseMention();
             return false;
         }
 
@@ -26,7 +27,7 @@ public sealed class PlayerMentionChatArgumentType(Func<IReadOnlyList<MentionTarg
             .ToArray();
         if (matches.Length != 1)
         {
-            error = $"Unknown player '{alias}'.";
+            error = ChatCmdText.UnknownPlayer(alias);
             return false;
         }
 

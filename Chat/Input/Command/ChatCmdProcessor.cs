@@ -12,11 +12,11 @@ public sealed class ChatCmdProcessor(ChatCmdRegistry registry)
 
         var tokenizeResult = ChatCmdTokenizer.Tokenize(text);
         if (tokenizeResult.Tokens.Count == 0)
-            return new ErrorChatCmdResult("Command name is required.");
+            return new ErrorChatCmdResult(ChatCmdText.CommandNameRequired(), ChatCmdText.SystemHeader());
 
         var commandName = tokenizeResult.Tokens[0].Value;
         if (!registry.TryGet(commandName, out var command) || command is null)
-            return new ErrorChatCmdResult($"Unknown command '{commandName}'.");
+            return new ErrorChatCmdResult(ChatCmdText.UnknownCommand(commandName), ChatCmdText.SystemHeader());
 
         var rawArgs = tokenizeResult.Tokens.Skip(1).ToArray();
         var parsedArgs = new List<object?>(command.Args.Count);
@@ -30,7 +30,8 @@ public sealed class ChatCmdProcessor(ChatCmdRegistry registry)
                 if (argIndex >= rawArgs.Length)
                 {
                     if (!spec.IsOptional)
-                        return new ErrorChatCmdResult($"Missing required argument '{spec.Name}'.");
+                        return new ErrorChatCmdResult(ChatCmdText.MissingArgument(spec.Name),
+                            ChatCmdText.SystemHeader());
 
                     parsedArgs.Add(null);
                     continue;
@@ -38,11 +39,13 @@ public sealed class ChatCmdProcessor(ChatCmdRegistry registry)
 
                 var greedyValue = string.Join(" ", rawArgs.Skip(argIndex).Select(static token => token.Value));
                 if (!spec.ArgType.TryParse(greedyValue, out var parsedValue, out var parseError))
-                    return new ErrorChatCmdResult(parseError ?? $"Invalid value for '{spec.Name}'.");
+                    return new ErrorChatCmdResult(parseError ?? ChatCmdText.InvalidArgument(spec.Name),
+                        ChatCmdText.SystemHeader());
 
                 parsedArgs.Add(parsedValue);
                 if (argIndex + 1 != command.Args.Count)
-                    return new ErrorChatCmdResult($"Greedy argument '{spec.Name}' must be the final argument.");
+                    return new ErrorChatCmdResult(ChatCmdText.GreedyArgumentMustBeFinal(spec.Name),
+                        ChatCmdText.SystemHeader());
 
                 return command.Execute(new ChatCmdInvocation
                 {
@@ -54,21 +57,22 @@ public sealed class ChatCmdProcessor(ChatCmdRegistry registry)
             if (argIndex >= rawArgs.Length)
             {
                 if (!spec.IsOptional)
-                    return new ErrorChatCmdResult($"Missing required argument '{spec.Name}'.");
+                    return new ErrorChatCmdResult(ChatCmdText.MissingArgument(spec.Name), ChatCmdText.SystemHeader());
 
                 parsedArgs.Add(null);
                 continue;
             }
 
             if (!spec.ArgType.TryParse(rawArgs[argIndex].Value, out var value, out var error))
-                return new ErrorChatCmdResult(error ?? $"Invalid value for '{spec.Name}'.");
+                return new ErrorChatCmdResult(error ?? ChatCmdText.InvalidArgument(spec.Name),
+                    ChatCmdText.SystemHeader());
 
             parsedArgs.Add(value);
         }
 
         // 固定签名模式下，遍历完声明参数后还剩 token，就只能视为参数过多。
         if (rawArgs.Length > command.Args.Count)
-            return new ErrorChatCmdResult($"Too many arguments for '/{command.Name}'.");
+            return new ErrorChatCmdResult(ChatCmdText.TooManyArguments(command.Name), ChatCmdText.SystemHeader());
 
         return command.Execute(new ChatCmdInvocation
         {

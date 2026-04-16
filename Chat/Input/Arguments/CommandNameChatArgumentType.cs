@@ -1,5 +1,5 @@
-using lemonSpire2.Chat.Input.Model;
 using lemonSpire2.Chat.Input.Command;
+using lemonSpire2.Chat.Input.Model;
 
 namespace lemonSpire2.Chat.Input.Arguments;
 
@@ -17,7 +17,7 @@ public sealed class CommandNameChatArgumentType(ChatCmdRegistry registry) : ICha
         }
 
         value = null;
-        error = $"Unknown command '{token}'.";
+        error = ChatCmdText.UnknownCommand(token);
         return false;
     }
 

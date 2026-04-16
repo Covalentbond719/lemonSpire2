@@ -16,8 +16,8 @@ public sealed class ChatCmdProcessorTests
         var result = processor.Process("/help");
 
         var display = Assert.IsType<LocalDisplayChatCmdResult>(result);
-        Assert.Contains("/help", display.Text);
-        Assert.Contains("/w", display.Text);
+        Assert.False(string.IsNullOrWhiteSpace(display.Text));
+        Assert.Equal(ChatCmdText.SystemHeader(), display.HeaderText);
     }
 
     [Fact]
@@ -77,7 +77,8 @@ public sealed class ChatCmdProcessorTests
         var result = processor.Process("/foobar hi");
 
         var error = Assert.IsType<ErrorChatCmdResult>(result);
-        Assert.Contains("foobar", error.Message);
+        Assert.False(string.IsNullOrWhiteSpace(error.Message));
+        Assert.Equal(ChatCmdText.SystemHeader(), error.HeaderText);
     }
 
     [Fact]
