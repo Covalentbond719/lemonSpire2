@@ -35,6 +35,7 @@ public class ChatStore
                 Segments = [new RichTextSegment { Text = safeText }]
             };
             Dispatch(new IntentSendMessage { Message = msg });
+            return true;
         });
 
         IntentRegistry.Register<IntentSendSegments>(i =>
@@ -51,12 +52,20 @@ public class ChatStore
                 Segments = i.Segments
             };
             Dispatch(new IntentSendMessage { Message = msg });
+            return true;
         });
 
         IntentRegistry.Register<IntentSendMessage>(i =>
-            OnSendMessage(i.Message)
+            {
+                OnSendMessage(i.Message);
+                return true;
+            }
         );
-        IntentRegistry.Register<IntentReceiveMessage>(i => { Model.AppendMessage(i.Message); });
+        IntentRegistry.Register<IntentReceiveMessage>(i =>
+        {
+            Model.AppendMessage(i.Message);
+            return true;
+        });
     }
 
     private static Logger Log => ChatUiPatch.Log;

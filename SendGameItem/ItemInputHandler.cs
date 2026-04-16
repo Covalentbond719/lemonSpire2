@@ -43,8 +43,6 @@ public static class ItemInputHandler
             {
                 case NEventOptionButton { Option: { } option }:
                     return CreateEventOptionPrimarySegment(option);
-                case NPower { Model: { } pm }:
-                    return CreatePowerShareSegment(pm);
                 case NDeckHistoryEntry { Card: { } card }:
                     return CreateSegmentFromModel(card);
                 case NOrb { Model: { } orb }:
@@ -53,6 +51,8 @@ public static class ItemInputHandler
                     return CreateSegmentFromModel(card);
                 case NCard { Model: { } card }:
                     return CreateSegmentFromModel(card);
+                case NPower { Model: { } pm }:
+                    return CreatePowerShareSegment(pm); // Power 必须小于 Orb
                 case NPotionHolder { Potion.Model: { } potion }:
                     return CreateSegmentFromModel(potion);
                 case NPotion { Model: { } potion }:
