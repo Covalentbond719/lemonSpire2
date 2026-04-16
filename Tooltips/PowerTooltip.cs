@@ -1,6 +1,5 @@
 using Godot;
 using lemonSpire2.util;
-using MegaCrit.Sts2.Core.Localization;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Platform;
@@ -70,47 +69,16 @@ public sealed class PowerTooltip : Tooltip
     public override string Render()
     {
         var power = ResolveModel();
-        var ownerPrefix = BuildOwnerPrefix();
         var stackSuffix = Amount > 0 ? $" x{Amount}" : string.Empty;
 
         if (power is null)
-            return $"{ownerPrefix}{PowerIdStr}{stackSuffix}";
+            return $"{PowerIdStr}{stackSuffix}";
 
         var color = GetPowerColor(power).ToHtml();
         var title = power.Title.GetFormattedText();
         var iconPrefix = $"[img={16}x{16}]{power.IconPath}[/img] ";
 
-        return $"{ownerPrefix}{iconPrefix}[color={color}]{title}{stackSuffix}[/color]";
-    }
-
-    private string BuildOwnerPrefix()
-    {
-        var ownerText = ResolveOwnerText();
-        if (string.IsNullOrWhiteSpace(ownerText))
-            return string.Empty;
-
-        var loc = new LocString("gameplay_ui", "LEMONSPIRE.chat.powerOwnerPrefix");
-        loc.Add("Owner", ownerText);
-        return loc.GetFormattedText();
-    }
-
-    private string ResolveOwnerText()
-    {
-        return OwnerKind switch
-        {
-            TooltipOwnerKind.PlayerName => OwnerPlayerName,
-            TooltipOwnerKind.MonsterModel => ResolveMonsterTitle(OwnerMonsterIdStr),
-            _ => string.Empty
-        };
-    }
-
-    private static string ResolveMonsterTitle(string monsterId)
-    {
-        if (string.IsNullOrWhiteSpace(monsterId))
-            return string.Empty;
-
-        var model = StsUtil.ResolveModel<MonsterModel>(monsterId);
-        return model?.Title.GetFormattedText() ?? monsterId;
+        return $"{iconPrefix}[color={color}]{title}{stackSuffix}[/color]";
     }
 
     public override void Serialize(PacketWriter writer)

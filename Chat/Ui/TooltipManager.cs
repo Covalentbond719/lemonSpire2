@@ -1,5 +1,6 @@
 using Godot;
 using lemonSpire2.Chat.Intent;
+using lemonSpire2.Chat.Message;
 using lemonSpire2.Tooltips;
 
 namespace lemonSpire2.Chat.Ui;
@@ -59,6 +60,9 @@ public sealed class TooltipManager
 
     private void OnHoverStart(IntentMetaHoverStart intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return;
+
         if (_parent is null)
         {
             ChatUiPatch.Log.Error("execute hover start without parent defined??? skipped.");
@@ -96,11 +100,17 @@ public sealed class TooltipManager
 
     private void OnHoverEnd(IntentMetaHoverEnd intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return;
+
         ClearPreview();
     }
 
     private void OnClick(IntentMetaClick intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return;
+
         ClearPreview();
     }
 

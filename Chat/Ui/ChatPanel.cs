@@ -18,6 +18,7 @@ namespace lemonSpire2.Chat.Ui;
 public sealed class ChatPanel : IDisposable
 {
     private readonly Action<IIntent> _dispatch;
+    private readonly EntityFocusManager _entityFocusManager = new();
     private readonly List<string> _inputHistory = [];
     private readonly AudioStream? _messageSound;
     private readonly ChatModel _model;
@@ -48,6 +49,7 @@ public sealed class ChatPanel : IDisposable
         _messageSound = GD.Load<AudioStream>(ChatConfig.MessageSoundPath);
         _model.OnMessageAppended += OnMessageAppended;
         _tooltipManager.RegisterHandlers(intentRegistry);
+        _entityFocusManager.RegisterHandlers(intentRegistry);
         CreateUi();
     }
 
@@ -285,15 +287,10 @@ public sealed class ChatPanel : IDisposable
         _messageBuffer.Pop();
 
         // message segments
-        foreach (var segment in message.Segments) RenderSegment(segment);
+        foreach (var segment in message.Segments) _messageBuffer.AppendText(segment.Render());
 
         _messageBuffer.AppendText("\n");
         _messageBuffer.ScrollToLine(_messageBuffer.GetLineCount() - 1);
-    }
-
-    private void RenderSegment(IMsgSegment segment)
-    {
-        segment.RenderTo(_messageBuffer);
     }
 
     private void PlayMessageSound()

@@ -135,5 +135,6 @@ public class ChatStore
             ReceiverId = 0,
             Segments = segments
         });
+        Log.Info($"Sent to chat: {string.Join(", ", segments.Select(s => s.Render()))}");
     }
 }

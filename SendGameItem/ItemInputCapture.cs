@@ -57,7 +57,7 @@ public partial class ItemInputCapture : Control
     {
         Log.Debug("Alt+LeftClick detected");
 
-        var hovered = GetViewport()?.GuiGetHoveredControl();
+        var hovered = GetHoveredControl();
         if (hovered == null)
         {
             Log.Debug("No hovered control");
@@ -74,23 +74,46 @@ public partial class ItemInputCapture : Control
             return;
         }
 
-        var segments = ItemInputHandler.FindItemToTooltipSegments(hovered).ToArray();
-        if (segments.Length == 0)
+        var segment = ItemInputHandler.FindItemToTooltipSegment(hovered);
+        if (segment == null)
         {
-            Log.Debug("No item segments found");
+            Log.Debug("No item segment found");
             if (BlockAltClickOnNoItem)
                 GetViewport()?.SetInputAsHandled();
             return;
         }
 
-        Log.Info($"Found {segments.Length} item segments");
-        ChatStore.SendToChat([.. segments]);
+        Log.Info($"Found item segment: {segment.Render()}");
+        ChatStore.SendToChat(segment);
         GetViewport()?.SetInputAsHandled();
     }
 
     private void HandleAltRightClick()
     {
-        Log.Debug("Alt+RightClick detected - trying to capture visible HoverTip");
+        Log.Debug("Alt+RightClick detected");
+
+        var hovered = GetHoveredControl();
+        if (hovered != null)
+        {
+            Log.Debug($"Hovered: {hovered.Name} ({hovered.GetType().Name})");
+
+            if (IsInsideBlockingControl(hovered))
+            {
+                Log.Debug("Inside blocking control, ignoring");
+                return;
+            }
+
+            var hoveredSegments = ItemInputHandler.FindItemAndHoverTipSegments(hovered).ToArray();
+            if (hoveredSegments.Length > 0)
+            {
+                Log.Info($"Found {hoveredSegments.Length} hovered item segments");
+                ChatStore.SendToChat([.. hoveredSegments]);
+                GetViewport()?.SetInputAsHandled();
+                return;
+            }
+        }
+
+        Log.Debug("Hovered item not resolved, trying visible HoverTip fallback");
 
         var container = NGame.Instance?.HoverTipsContainer;
         if (container == null)
@@ -113,30 +136,38 @@ public partial class ItemInputCapture : Control
         }
     }
 
-    private static IEnumerable<TooltipSegment> ExtractSegmentsFromHoverTipSet(NHoverTipSet tipSet)
+    private static IReadOnlyList<IMsgSegment> ExtractSegmentsFromHoverTipSet(NHoverTipSet tipSet)
     {
-        // 1. 卡牌 hover 优先发送当前展示的整组内容：卡牌本体 + 文本 hover tips
-        var cardSegments = ExtractFromCardContainer(tipSet).ToArray();
-        if (cardSegments.Length > 0)
+        var ownerSegments = ExtractFromOwner(tipSet).ToArray();
+        if (ownerSegments.Length > 0)
         {
-            var textSegments = ExtractFromTextContainer(tipSet).ToArray();
-            return cardSegments.Concat(textSegments);
+            Log.Info($"Extracted owner segments: {string.Join(", ", ownerSegments.Select(s => s.Render()))}");
+            return ownerSegments;
         }
 
-        // 2. 再从 HoverTip owner 反推原始对象，事件选项也走这条链路
-        var ownerSegments = ExtractFromOwner(tipSet).ToArray();
-        if (ownerSegments.Length > 0) return ownerSegments;
+        var cardSegments = ExtractFromCardContainer(tipSet);
+        if (cardSegments.Count > 0)
+        {
+            var textSegments = ExtractFromTextContainer(tipSet);
+            cardSegments.AddRange(textSegments);
+            Log.Info($"Extracted card fallback segments: {string.Join(", ", cardSegments.Select(s => s.Render()))}");
+            return cardSegments;
+        }
 
-        // 3. 最后保留文本 fallback
         var textFallbackSegments = ExtractFromTextContainer(tipSet).ToArray();
         return textFallbackSegments.Length > 0 ? textFallbackSegments : [];
     }
 
-    private static IEnumerable<TooltipSegment> ExtractFromOwner(NHoverTipSet tipSet)
+    private static IReadOnlyList<IMsgSegment> ExtractFromOwner(NHoverTipSet tipSet)
     {
         return HoverTipOwnerField?.GetValue(tipSet) is not Node owner
             ? []
-            : ItemInputHandler.FindItemToTooltipSegments(owner);
+            : ItemInputHandler.FindItemAndHoverTipSegments(owner);
+    }
+
+    private Control? GetHoveredControl()
+    {
+        return GetViewport()?.GuiGetHoveredControl();
     }
 
     private static List<TooltipSegment> ExtractFromCardContainer(NHoverTipSet tipSet)

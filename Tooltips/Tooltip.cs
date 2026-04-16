@@ -40,15 +40,9 @@ public abstract class Tooltip
     public abstract void Serialize(PacketWriter writer);
     public abstract void Deserialize(PacketReader reader);
 
-    public List<TooltipSegment> ToTooltipSegments()
+    public IEnumerable<TooltipSegment> ToTooltipSegments()
     {
-        return
-        [
-            new TooltipSegment
-            {
-                Tooltip = this
-            }
-        ];
+        return [ToTooltipSegment()];
     }
 
     public TooltipSegment ToTooltipSegment()
