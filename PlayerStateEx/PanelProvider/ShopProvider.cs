@@ -1,6 +1,7 @@
 using System.Globalization;
 using Godot;
 using lemonSpire2.Chat.Message;
+using lemonSpire2.PlayerStateEx.RemoteFlash;
 using lemonSpire2.SyncShop;
 using lemonSpire2.Tooltips;
 using lemonSpire2.util;
@@ -337,6 +338,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnCardClicked(Player player, ShopItemEntry entry, CardModel card)
     {
+        PlayerPanelChatHelper.RequestRemoteFlash(player, RemoteUiFlashKind.ShopCard, card);
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = CardTooltip.FromModel(card) };
         PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);
@@ -345,6 +347,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnRelicClicked(Player player, ShopItemEntry entry, RelicModel relic)
     {
+        PlayerPanelChatHelper.RequestRemoteFlash(player, RemoteUiFlashKind.ShopRelic, relic);
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = RelicTooltip.FromModel(relic) };
         PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);
@@ -353,6 +356,7 @@ public class ShopProvider : IPlayerPanelProvider
 
     private static void OnPotionClicked(Player player, ShopItemEntry entry, PotionModel potion)
     {
+        PlayerPanelChatHelper.RequestRemoteFlash(player, RemoteUiFlashKind.ShopPotion, potion);
         if (!Input.IsKeyPressed(Key.Alt)) return;
         var segment = new TooltipSegment { Tooltip = PotionTooltip.FromModel(potion) };
         PlayerPanelChatHelper.SendPlayerItemToChat(player, "LEMONSPIRE.chat.shopShare", segment);

@@ -4,6 +4,7 @@ using HarmonyLib;
 using lemonSpire2.Chat;
 using lemonSpire2.ColorEx;
 using lemonSpire2.PlayerStateEx;
+using lemonSpire2.PlayerStateEx.RemoteFlash;
 using lemonSpire2.SendGameItem;
 using lemonSpire2.StatsTracker;
 using lemonSpire2.SyncReward;
@@ -76,6 +77,7 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(PlayerColorButtonPatch)).Patch();
         }
 
+        harmony.CreateClassProcessor(typeof(RemoteUiFlashInitPatch)).Patch();
         harmony.CreateClassProcessor(typeof(NMultiplayerPlayerStatePatch)).Patch();
 
         Log.Info("lemonSpire2 mod initialized");

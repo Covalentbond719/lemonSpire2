@@ -1,5 +1,6 @@
 using Godot;
 using lemonSpire2.Chat.Message;
+using lemonSpire2.PlayerStateEx.RemoteFlash;
 using lemonSpire2.Tooltips;
 using lemonSpire2.util;
 using lemonSpire2.util.Ui;
@@ -27,6 +28,7 @@ public class HandCardProvider : IPlayerPanelProvider
     private static void OnEntryClicked(CardModel card, Player player)
     {
         Log.Debug($"OnEntryClicked: {card.Title}, Alt={Input.IsKeyPressed(Key.Alt)}");
+        PlayerPanelChatHelper.RequestRemoteFlash(player, RemoteUiFlashKind.HandCard, card);
 
         // 每次点击时重新获取手牌列表，确保是最新的
         var cards = player.PlayerCombatState?.Hand.Cards.ToList() ?? new List<CardModel>();
