@@ -2,11 +2,13 @@ using Godot;
 using lemonSpire2.util;
 using MegaCrit.Sts2.Core.Assets;
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.HoverTips;
+using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves.Runs;
 
 namespace lemonSpire2.Tooltips;
 
@@ -14,35 +16,38 @@ public sealed class CardTooltip : Tooltip
 {
     protected override string TypeTag => "card";
 
-    public required string ModelIdStr { get; set; }
-    public int UpgradeLevel { get; set; }
+    public required SerializableCard Snapshot { get; set; }
+    public ulong OwnerNetId { get; set; }
+    public PileType DisplayPile { get; set; } = PileType.Deck;
+    public bool UseCombatPreview { get; set; }
 
     public static CardTooltip FromModel(CardModel card)
     {
         ArgumentNullException.ThrowIfNull(card);
+        var snapshotSource = (CardModel)card.MutableClone();
+        var ownerNetId = snapshotSource.Owner.NetId;
+        var pileType = snapshotSource.Pile?.Type ?? PileType.Deck;
+        var useCombatPreview = snapshotSource.IsInCombat;
+
         return new CardTooltip
         {
-            ModelIdStr = card.Id.Entry,
-            UpgradeLevel = card.CurrentUpgradeLevel
+            Snapshot = snapshotSource.ToSerializable(),
+            OwnerNetId = ownerNetId,
+            DisplayPile = pileType,
+            UseCombatPreview = useCombatPreview
         };
     }
 
-    public static Color GetCardRarityColor(CardRarity rarity)
+    public static CardTooltip FromChatReference(CardModel card)
     {
-        return rarity switch
+        ArgumentNullException.ThrowIfNull(card);
+
+        var snapshotSource = (CardModel)card.MutableClone();
+
+        return new CardTooltip
         {
-            CardRarity.Basic => StsColors.cardTitleOutlineCommon,
-            CardRarity.Common => StsColors.cardTitleOutlineCommon,
-            CardRarity.Uncommon => StsColors.cardTitleOutlineUncommon,
-            CardRarity.Rare => StsColors.cardTitleOutlineRare,
-            CardRarity.Curse => StsColors.cardTitleOutlineCurse,
-            CardRarity.Quest => StsColors.cardTitleOutlineQuest,
-            CardRarity.Status => StsColors.cardTitleOutlineStatus,
-            CardRarity.Ancient => StsColors.cardTitleOutlineSpecial,
-            CardRarity.Event => StsColors.cardTitleOutlineSpecial,
-            CardRarity.Token => StsColors.cardTitleOutlineSpecial,
-            CardRarity.None => StsColors.cream,
-            _ => throw new ArgumentOutOfRangeException(nameof(rarity), rarity, null)
+            Snapshot = snapshotSource.ToSerializable(),
+            UseCombatPreview = false
         };
     }
 
@@ -54,10 +59,10 @@ public sealed class CardTooltip : Tooltip
 
     public override string Render()
     {
-        var card = ResolveModel();
+        var card = ResolveCardForChat();
         if (card is null) return "Broken Card";
 
-        var rarityColor = GetCardRarityColor(card.Rarity);
+        var rarityColor = StsUtil.GetRarityColor(card.Rarity);
         var poolColor = GetCardPoolColor(card);
 
         return $"[color={poolColor.ToHtml()}]■[/color] [color={rarityColor.ToHtml()}]{card.Title}[/color]";
@@ -66,55 +71,72 @@ public sealed class CardTooltip : Tooltip
     public override void Serialize(PacketWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteString(ModelIdStr);
-        writer.WriteInt(UpgradeLevel);
+        writer.Write(Snapshot);
+        writer.WriteULong(OwnerNetId);
+        writer.WriteInt((int)DisplayPile);
+        writer.WriteBool(UseCombatPreview);
     }
 
     public override void Deserialize(PacketReader reader)
     {
         ArgumentNullException.ThrowIfNull(reader);
-        ModelIdStr = reader.ReadString();
-        UpgradeLevel = reader.ReadInt();
+        Snapshot = reader.Read<SerializableCard>();
+        OwnerNetId = reader.ReadULong();
+        var pile = reader.ReadInt();
+        DisplayPile = Enum.IsDefined(typeof(PileType), pile) ? (PileType)pile : PileType.Deck;
+        UseCombatPreview = reader.ReadBool();
     }
 
     public override Control? CreatePreview()
     {
-        var model = ResolveModel();
+        var model = ResolveCardForChat();
         if (model is null) return null;
-
+        var previewPile = ResolvePreviewPile(model);
+        var root = new HBoxContainer
+        {
+            Name = "CardTooltipPreview"
+        };
+        root.AddThemeConstantOverride("separation", 10);
 
         var container = PreloadManager.Cache
             .GetScene("res://scenes/ui/card_hover_tip.tscn")
             .Instantiate<Control>();
 
         var nCard = container.GetNode<NCard>("%Card");
+        var tips = model.HoverTips;
 
-        // Must AddChild before UpdateVisuals, use CallDeferred
+        // Must AddChild before UpdateVisuals, use CallDeferred.
         container.TreeEntered += () =>
         {
             Callable.From(() =>
             {
                 nCard.Model = model;
-                nCard.UpdateVisuals(PileType.Deck, CardPreviewMode.Normal);
+                nCard.UpdateVisuals(previewPile, CardPreviewMode.Normal);
+                NHoverTipSet.CreateAndShow(container, tips, HoverTipAlignment.Right);
             }).CallDeferred();
         };
+        root.AddChild(container);
 
-        SetSubtreeMouseIgnore(container);
-        return container;
+        SetSubtreeMouseIgnore(root);
+        return root;
     }
 
-    public override IHoverTip ToHoverTip()
+    private CardModel? ResolveCardForChat()
     {
-        var model = ResolveModel();
-        if (model is null)
-            throw new InvalidOperationException($"Cannot resolve card model: {ModelIdStr}");
+        if (Snapshot.Id == null) return null;
 
-        var mutableCard = model.IsMutable ? model : model.ToMutable();
-        return new CardHoverTip(mutableCard);
+        var model = CardModel.FromSerializable(Snapshot);
+        var owner = RunManager.Instance.State?.GetPlayer(OwnerNetId);
+        if (owner == null) return model;
+        model.Owner = owner;
+        if (UseCombatPreview) model.UpgradePreviewType = CardUpgradePreviewType.Combat;
+
+        return model;
     }
 
-    private CardModel? ResolveModel()
+    private PileType ResolvePreviewPile(CardModel model)
     {
-        return StsUtil.ResolveModel<CardModel>(ModelIdStr);
+        if (DisplayPile is not (PileType.Hand or PileType.Play)) return DisplayPile;
+        return model.RunState == null ? PileType.Deck : DisplayPile;
     }
 }

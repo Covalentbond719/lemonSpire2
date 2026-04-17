@@ -1,8 +1,5 @@
 using Godot;
 using lemonSpire2.util;
-using MegaCrit.Sts2.Core.Entities.Potions;
-using MegaCrit.Sts2.Core.Helpers;
-using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
@@ -23,27 +20,12 @@ public sealed class PotionTooltip : Tooltip
         };
     }
 
-    public static Color GetPotionRarityColor(PotionRarity rarity)
-    {
-        return rarity switch
-        {
-            // potion don't have rarity color definations in the game, so we will just use the same colors as cards
-            PotionRarity.Common => StsColors.cardTitleOutlineCommon,
-            PotionRarity.Uncommon => StsColors.cardTitleOutlineUncommon,
-            PotionRarity.Rare => StsColors.cardTitleOutlineRare,
-            PotionRarity.Event => StsColors.cardTitleOutlineSpecial,
-            PotionRarity.Token => StsColors.cardTitleOutlineSpecial,
-            PotionRarity.None => StsColors.cream,
-            _ => throw new ArgumentOutOfRangeException(nameof(rarity), rarity, null)
-        };
-    }
-
     public override string Render()
     {
         var model = ResolveModel();
         if (model is null) return "Broken Potion";
 
-        var color = GetPotionRarityColor(model.Rarity);
+        var color = StsUtil.GetRarityColor(model.Rarity);
         var iconPath = model.ImagePath;
 
         return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title.GetFormattedText()}[/color]";
@@ -64,19 +46,8 @@ public sealed class PotionTooltip : Tooltip
     public override Control? CreatePreview()
     {
         var model = ResolveModel();
-        if (model is null) return null;
-
-        // Potion atlas resources are regular textures; using model.Image is stable across locales.
-        return BuildHoverTipControl(model.HoverTip, model.Image);
-    }
-
-    public override IHoverTip ToHoverTip()
-    {
-        var model = ResolveModel();
-        if (model is null)
-            throw new InvalidOperationException($"Cannot resolve potion model: {ModelIdStr}");
-
-        return model.HoverTip;
+        return model is null ? null : BuildHoverTipControl(model.HoverTip, model.Image);
+        // use a more stable image object
     }
 
     private PotionModel? ResolveModel()

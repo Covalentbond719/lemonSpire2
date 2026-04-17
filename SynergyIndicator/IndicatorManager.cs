@@ -1,10 +1,12 @@
 using Godot;
 using lemonSpire2.SynergyIndicator.Message;
 using lemonSpire2.SynergyIndicator.Models;
+using lemonSpire2.util;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Multiplayer.Game;
 using MegaCrit.Sts2.Core.Nodes.Multiplayer;
 using IndicatorPanel = lemonSpire2.SynergyIndicator.Ui.IndicatorPanel;
+using IndicatorType = lemonSpire2.SynergyIndicator.IndicatorRegistry.IndicatorType;
 
 namespace lemonSpire2.SynergyIndicator;
 
@@ -14,14 +16,6 @@ namespace lemonSpire2.SynergyIndicator;
 public sealed class IndicatorManager : IDisposable
 {
     private static IndicatorManager? _instance;
-
-    private static readonly IReadOnlyList<IIndicatorProvider> Providers =
-    [
-        new HandShakeIndicatorProvider(),
-        new VulnerableIndicatorProvider(),
-        new WeakIndicatorProvider(),
-        new StrangleIndicatorProvider()
-    ];
 
     private readonly AudioStream? _noticeSound;
 
@@ -34,7 +28,7 @@ public sealed class IndicatorManager : IDisposable
 
     private IndicatorManager()
     {
-        _noticeSound = GD.Load<AudioStream>("res://lemonSpire2/synergy-notice.mp3");
+        _noticeSound = ModSoundManager.Load(ModSound.SynergyNotice);
     }
 
     public static IndicatorManager Instance => _instance ??= new IndicatorManager();
@@ -137,11 +131,21 @@ public sealed class IndicatorManager : IDisposable
         var netId = player.NetId;
         if (player.PlayerCombatState?.Hand.Cards == null) return;
 
-        var shouldShowTypes = PlayerExpectedTypes(player.PlayerCombatState);
-
+        var expectedTypes = PlayerExpectedTypes(player.PlayerCombatState);
         var currentTypes = PlayerCurrentTypes(player);
 
-        UpdateIndicator(shouldShowTypes, currentTypes, netId);
+        var shouldShow = new HashSet<IndicatorType>(expectedTypes);
+        var shouldDisappear = new HashSet<IndicatorType>(currentTypes);
+
+        shouldShow.ExceptWith(shouldDisappear);
+        shouldDisappear.ExceptWith(expectedTypes);
+
+        UpdateIndicator(shouldShow, shouldDisappear, netId);
+
+        if (shouldShow.Count != 0) Instance.PlayNoticeSound();
+
+        SynergyIndicatorPatch.Log.Info(
+            $"Updated indicators for player {netId}. Should show: {string.Join(", ", shouldShow)}; Should disappear: {string.Join(", ", shouldDisappear)}");
     }
 
     /// <summary>
@@ -157,7 +161,7 @@ public sealed class IndicatorManager : IDisposable
     {
         var cards = state.Hand.Cards;
         var expectedTypes = new HashSet<IndicatorType>();
-        foreach (var provider in Providers)
+        foreach (var provider in IndicatorRegistry.Providers)
             if (provider.ShouldShow(cards))
                 expectedTypes.Add(provider.Type);
         return expectedTypes;
@@ -170,13 +174,11 @@ public sealed class IndicatorManager : IDisposable
             : [];
     }
 
-    private static void UpdateIndicator(HashSet<IndicatorType> shouldShowTypes, HashSet<IndicatorType> currentTypes,
+    private static void UpdateIndicator(HashSet<IndicatorType> shouldShow, HashSet<IndicatorType> shouldDisappear,
         ulong netId)
     {
-        foreach (var type in shouldShowTypes.Where(type => !currentTypes.Contains(type)))
-            Instance.AddIndicator(netId, type, IndicatorStatus.WillUse);
+        foreach (var type in shouldShow) Instance.AddIndicator(netId, type, IndicatorStatus.WillUse);
 
-        foreach (var type in currentTypes.Where(type => !shouldShowTypes.Contains(type)))
-            Instance.RemoveIndicator(netId, type);
+        foreach (var type in shouldDisappear) Instance.RemoveIndicator(netId, type);
     }
 }

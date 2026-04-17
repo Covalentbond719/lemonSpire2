@@ -4,11 +4,13 @@ using HarmonyLib;
 using lemonSpire2.Chat;
 using lemonSpire2.ColorEx;
 using lemonSpire2.PlayerStateEx;
+using lemonSpire2.PlayerStateEx.RemoteFlash;
 using lemonSpire2.SendGameItem;
 using lemonSpire2.StatsTracker;
 using lemonSpire2.SyncReward;
 using lemonSpire2.SyncShop;
 using lemonSpire2.SynergyIndicator;
+using lemonSpire2.util;
 using MegaCrit.Sts2.Core.Logging;
 using MegaCrit.Sts2.Core.Modding;
 using Logger = MegaCrit.Sts2.Core.Logging.Logger;
@@ -25,11 +27,13 @@ public partial class MainFile : Node
     public static void Initialize()
     {
         ModConfigRegistry.Register(ModId, new LemonSpireConfig());
+        ModSoundManager.Initialize();
 
         // 设置日志级别为 Debug，启用所有模块的调试日志
         SetupLogLevels();
 
         Harmony harmony = new(ModId);
+        PlayerPanelRegistry.RegisterBuiltins();
 
         if (LemonSpireConfig.EnableQoL)
             harmony.CreateClassProcessor(typeof(NMultiplayerPlayerExpandedStatePatch)).Patch();
@@ -73,14 +77,13 @@ public partial class MainFile : Node
             harmony.CreateClassProcessor(typeof(PlayerColorButtonPatch)).Patch();
         }
 
-        if (PlayerTooltipRegistry.HasProviders)
-            harmony.CreateClassProcessor(typeof(NMultiplayerPlayerStatePatch)).Patch();
+        harmony.CreateClassProcessor(typeof(RemoteUiFlashInitPatch)).Patch();
+        harmony.CreateClassProcessor(typeof(NMultiplayerPlayerStatePatch)).Patch();
 
         Log.Info("lemonSpire2 mod initialized");
     }
 
     private static void SetupLogLevels()
     {
-        Logger.SetLogLevelForType(LogType.GameSync, LogLevel.Debug);
     }
 }

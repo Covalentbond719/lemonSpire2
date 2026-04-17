@@ -1,6 +1,6 @@
+using System.Reflection;
 using Godot;
 using lemonSpire2.Chat;
-using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.Tooltips;
 using lemonSpire2.util;
@@ -17,10 +17,8 @@ namespace lemonSpire2.SendGameItem;
 /// </summary>
 public partial class ItemInputCapture : Control
 {
-    /// <summary>
-    ///     已注册的阻塞控件列表 — 这些控件内部的 Alt+Click 将被放过
-    /// </summary>
-    private static readonly WeakNodeRegistry<Control> BlockingControls = new();
+    private static readonly FieldInfo? HoverTipOwnerField =
+        typeof(NHoverTipSet).GetField("_owner", BindingFlags.NonPublic | BindingFlags.Instance);
 
     private static Logger Log => SendItemInputPatch.Log;
 
@@ -30,6 +28,258 @@ public partial class ItemInputCapture : Control
     ///     设为 false 允许其他 Mod 处理 Alt+Click
     /// </summary>
     public static bool BlockAltClickOnNoItem { get; set; }
+
+    public override void _Ready()
+    {
+        ProcessMode = ProcessModeEnum.Always;
+        MouseFilter = MouseFilterEnum.Ignore;
+        Log.Info("ItemInputCapture ready");
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        // MiddleClick: 把当前捕获的物品插入聊天输入框，交给输入解析链继续处理。
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Middle })
+        {
+            HandleMiddleClick();
+            return;
+        }
+
+        // Alt+LeftClick: 从悬停的节点发送物品
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left, AltPressed: true })
+        {
+            HandleAltLeftClick();
+            return;
+        }
+
+        // Alt+RightClick: 从当前显示的 HoverTip 发送
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true })
+        {
+            HandleAltRightClick();
+            return;
+        }
+    }
+
+    private void HandleMiddleClick()
+    {
+        Log.Debug("MiddleClick detected");
+
+        var hovered = GetHoveredControl();
+        if (hovered == null)
+        {
+            Log.Debug("No hovered control");
+            return;
+        }
+
+        if (IsInsideBlockingControl(hovered))
+        {
+            Log.Debug("Inside blocking control, ignoring");
+            return;
+        }
+
+        var segment = ItemInputHandler.FindItemToTooltipSegment(hovered);
+        if (!ItemInputInsertFormatter.TryFormat(segment, out var insertionText))
+        {
+            Log.Debug("Hovered item is not insertable");
+            return;
+        }
+
+        if (!ChatStore.TryInsertIntoInput(insertionText))
+            return;
+
+        Log.Info($"Inserted item reference into chat input: {insertionText}");
+        GetViewport()?.SetInputAsHandled();
+    }
+
+    private void HandleAltLeftClick()
+    {
+        Log.Debug("Alt+LeftClick detected");
+
+        var hovered = GetHoveredControl();
+        if (hovered == null)
+        {
+            Log.Debug("No hovered control");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
+            return;
+        }
+
+        Log.Debug($"Hovered: {hovered.Name} ({hovered.GetType().Name})");
+
+        if (IsInsideBlockingControl(hovered))
+        {
+            Log.Debug("Inside blocking control, ignoring");
+            return;
+        }
+
+        var segment = ItemInputHandler.FindItemToTooltipSegment(hovered);
+        if (segment == null)
+        {
+            Log.Debug("No item segment found");
+            if (BlockAltClickOnNoItem)
+                GetViewport()?.SetInputAsHandled();
+            return;
+        }
+
+        Log.Info($"Found item segment: {segment.Render()}");
+        ChatStore.SendToChat(segment);
+        GetViewport()?.SetInputAsHandled();
+    }
+
+    private void HandleAltRightClick()
+    {
+        Log.Debug("Alt+RightClick detected");
+
+        var hovered = GetHoveredControl();
+        if (hovered != null)
+        {
+            Log.Debug($"Hovered: {hovered.Name} ({hovered.GetType().Name})");
+
+            if (IsInsideBlockingControl(hovered))
+            {
+                Log.Debug("Inside blocking control, ignoring");
+                return;
+            }
+
+            var hoveredSegments = ItemInputHandler.FindItemAndHoverTipSegments(hovered).ToArray();
+            if (hoveredSegments.Length > 0)
+            {
+                Log.Info($"Found {hoveredSegments.Length} hovered item segments");
+                ChatStore.SendToChat([.. hoveredSegments]);
+                GetViewport()?.SetInputAsHandled();
+                return;
+            }
+        }
+
+        Log.Debug("Hovered item not resolved, trying visible HoverTip fallback");
+
+        var container = NGame.Instance?.HoverTipsContainer;
+        if (container == null)
+        {
+            Log.Debug("No HoverTipsContainer found");
+            return;
+        }
+
+        foreach (var child in container.GetChildren())
+        {
+            if (child is not NHoverTipSet { Visible: true } tipSet)
+                continue;
+
+            var segments = ExtractSegmentsFromHoverTipSet(tipSet).ToArray();
+            if (segments.Length == 0) continue;
+            Log.Info($"Captured {segments.Length} segments from HoverTip");
+            ChatStore.SendToChat([.. segments]);
+            GetViewport()?.SetInputAsHandled();
+            return;
+        }
+    }
+
+    private static IReadOnlyList<IMsgSegment> ExtractSegmentsFromHoverTipSet(NHoverTipSet tipSet)
+    {
+        var ownerSegments = ExtractFromOwner(tipSet).ToArray();
+        if (ownerSegments.Length > 0)
+        {
+            Log.Info($"Extracted owner segments: {string.Join(", ", ownerSegments.Select(s => s.Render()))}");
+            return ownerSegments;
+        }
+
+        var cardSegments = ExtractFromCardContainer(tipSet);
+        if (cardSegments.Count > 0)
+        {
+            var textSegments = ExtractFromTextContainer(tipSet);
+            cardSegments.AddRange(textSegments);
+            Log.Info($"Extracted card fallback segments: {string.Join(", ", cardSegments.Select(s => s.Render()))}");
+            return cardSegments;
+        }
+
+        var textFallbackSegments = ExtractFromTextContainer(tipSet).ToArray();
+        return textFallbackSegments.Length > 0 ? textFallbackSegments : [];
+    }
+
+    private static IReadOnlyList<IMsgSegment> ExtractFromOwner(NHoverTipSet tipSet)
+    {
+        return HoverTipOwnerField?.GetValue(tipSet) is not Node owner
+            ? []
+            : ItemInputHandler.FindItemAndHoverTipSegments(owner);
+    }
+
+    private Control? GetHoveredControl()
+    {
+        return GetViewport()?.GuiGetHoveredControl();
+    }
+
+    private static List<TooltipSegment> ExtractFromCardContainer(NHoverTipSet tipSet)
+    {
+        var cardContainer = tipSet.GetNodeOrNull<NHoverTipCardContainer>("cardHoverTipContainer");
+        if (cardContainer == null || cardContainer.GetChildCount() <= 0)
+            return [];
+
+        var segments = new List<TooltipSegment>();
+
+        foreach (var cardTipNode in cardContainer.GetChildren())
+        {
+            var nCard = cardTipNode.GetNodeOrNull<NCard>("%Card");
+            if (nCard?.Model == null) continue;
+
+            segments.Add(new TooltipSegment
+            {
+                Tooltip = CardTooltip.FromModel(nCard.Model)
+            });
+        }
+
+        return segments;
+    }
+
+    private static List<TooltipSegment> ExtractFromTextContainer(NHoverTipSet tipSet)
+    {
+        var textContainer = tipSet.GetNodeOrNull<VFlowContainer>("textHoverTipContainer");
+        if (textContainer == null || textContainer.GetChildCount() <= 0)
+            return [];
+
+        // 收集所有文本 tooltip 的内容
+        var segments = new List<TooltipSegment>();
+
+        foreach (var child in textContainer.GetChildren())
+        {
+            if (child is not Control tipControl) continue;
+
+            var titleLabel = tipControl.GetNodeOrNull<Label>("%Title");
+            var descLabel = tipControl.GetNodeOrNull<RichTextLabel>("%Description");
+            var iconRect = tipControl.GetNodeOrNull<TextureRect>("%Icon");
+
+            var title = titleLabel?.Text;
+            var description = descLabel?.Text ?? "";
+            var iconPath = iconRect?.Texture?.ResourcePath;
+
+            // 检查是否是 debuff（通过背景材质判断）
+            var isDebuff = false;
+            var bg = tipControl.GetNodeOrNull<CanvasItem>("%Bg");
+            if (bg?.Material != null)
+                // debuff tooltip 使用特定材质
+                isDebuff = bg.Material.ResourcePath?.Contains("debuff", StringComparison.OrdinalIgnoreCase) == true;
+
+            if (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(description))
+                segments.Add(new TooltipSegment
+                {
+                    Tooltip = new RichTextTooltip
+                    {
+                        Title = string.IsNullOrEmpty(title) ? null : title,
+                        Description = description,
+                        IsDebuff = isDebuff,
+                        IconPath = iconPath
+                    }
+                });
+        }
+
+        return segments;
+    }
+
+    #region Alt+Click Bypass
+
+    /// <summary>
+    ///     已注册的阻塞控件列表 — 这些控件内部的 Alt+Click 将被放过
+    /// </summary>
+    private static readonly WeakNodeRegistry<Control> BlockingControls = new();
 
     /// <summary>
     ///     UI 组件调用此方法注册自己，InputCapture 将放过其内部的 Alt+Click
@@ -56,192 +306,5 @@ public partial class ItemInputCapture : Control
         return found;
     }
 
-    public override void _Ready()
-    {
-        ProcessMode = ProcessModeEnum.Always;
-        MouseFilter = MouseFilterEnum.Ignore;
-        Log.Info("ItemInputCapture ready");
-    }
-
-    public override void _Input(InputEvent @event)
-    {
-        // Alt+LeftClick: 从悬停的节点发送物品
-        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left, AltPressed: true })
-        {
-            HandleAltLeftClick();
-            return;
-        }
-
-        // Alt+RightClick: 从当前显示的 HoverTip 发送
-        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Right, AltPressed: true })
-        {
-            HandleAltRightClick();
-            return;
-        }
-    }
-
-    private void HandleAltLeftClick()
-    {
-        Log.Debug("Alt+LeftClick detected");
-
-        var hovered = GetViewport()?.GuiGetHoveredControl();
-        if (hovered == null)
-        {
-            Log.Debug("No hovered control");
-            if (BlockAltClickOnNoItem)
-                GetViewport()?.SetInputAsHandled();
-            return;
-        }
-
-        Log.Debug($"Hovered: {hovered.Name} ({hovered.GetType().Name})");
-
-        if (IsInsideBlockingControl(hovered))
-        {
-            Log.Debug("Inside blocking control, ignoring");
-            return;
-        }
-
-        var segment = ItemInputHandler.FindItemToTooltipSegment(hovered);
-        if (segment == null)
-        {
-            Log.Debug("No item segment found");
-            if (BlockAltClickOnNoItem)
-                GetViewport()?.SetInputAsHandled();
-            return;
-        }
-
-        Log.Info($"Found item: {segment.Tooltip.Render()}");
-        SendItemSegment(segment);
-        GetViewport()?.SetInputAsHandled();
-    }
-
-    private void HandleAltRightClick()
-    {
-        Log.Debug("Alt+RightClick detected - trying to capture visible HoverTip");
-
-        var container = NGame.Instance?.HoverTipsContainer;
-        if (container == null)
-        {
-            Log.Debug("No HoverTipsContainer found");
-            return;
-        }
-
-        foreach (var child in container.GetChildren())
-        {
-            if (child is not NHoverTipSet tipSet || !tipSet.Visible)
-                continue;
-
-            var segment = ExtractSegmentFromHoverTipSet(tipSet);
-            if (segment != null)
-            {
-                Log.Info($"Captured from HoverTip: {segment.Tooltip.Render()}");
-                SendItemSegment(segment);
-                GetViewport()?.SetInputAsHandled();
-                return;
-            }
-        }
-
-        Log.Debug("No visible HoverTip with sendable content");
-    }
-
-    private static TooltipSegment? ExtractSegmentFromHoverTipSet(NHoverTipSet tipSet)
-    {
-        // 1. 尝试从 cardHoverTipContainer 获取卡牌（精确）
-        var cardSegment = ExtractFromCardContainer(tipSet);
-        if (cardSegment != null) return cardSegment;
-
-        // 2. 从 textHoverTipContainer 提取文本内容
-        var textSegment = ExtractFromTextContainer(tipSet);
-        if (textSegment != null) return textSegment;
-
-        return null;
-    }
-
-    private static TooltipSegment? ExtractFromCardContainer(NHoverTipSet tipSet)
-    {
-        var cardContainer = tipSet.GetNodeOrNull<NHoverTipCardContainer>("cardHoverTipContainer");
-        if (cardContainer == null || cardContainer.GetChildCount() <= 0)
-            return null;
-
-        foreach (var cardTipNode in cardContainer.GetChildren())
-        {
-            var nCard = cardTipNode.GetNodeOrNull<NCard>("%Card");
-            if (nCard?.Model == null) continue;
-
-            return new TooltipSegment
-            {
-                Tooltip = CardTooltip.FromModel(nCard.Model)
-            };
-        }
-
-        return null;
-    }
-
-    private static TooltipSegment? ExtractFromTextContainer(NHoverTipSet tipSet)
-    {
-        var textContainer = tipSet.GetNodeOrNull<VFlowContainer>("textHoverTipContainer");
-        if (textContainer == null || textContainer.GetChildCount() <= 0)
-            return null;
-
-        // 收集所有文本 tooltip 的内容
-        var tips = new List<(string? Title, string Description, bool IsDebuff, string? IconPath)>();
-
-        foreach (var child in textContainer.GetChildren())
-        {
-            if (child is not Control tipControl) continue;
-
-            var titleLabel = tipControl.GetNodeOrNull<Label>("%Title");
-            var descLabel = tipControl.GetNodeOrNull<RichTextLabel>("%Description");
-            var iconRect = tipControl.GetNodeOrNull<TextureRect>("%Icon");
-
-            var title = titleLabel?.Text;
-            var description = descLabel?.Text ?? "";
-            var iconPath = iconRect?.Texture?.ResourcePath;
-
-            // 检查是否是 debuff（通过背景材质判断）
-            var isDebuff = false;
-            var bg = tipControl.GetNodeOrNull<CanvasItem>("%Bg");
-            if (bg?.Material != null)
-                // debuff tooltip 使用特定材质
-                isDebuff = bg.Material.ResourcePath?.Contains("debuff", StringComparison.OrdinalIgnoreCase) == true;
-
-            if (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(description))
-                tips.Add((string.IsNullOrEmpty(title) ? null : title, description, isDebuff, iconPath));
-        }
-
-        if (tips.Count == 0) return null;
-
-        // 如果只有一个 tooltip，直接发送
-        {
-            var (title, desc, isDebuff, iconPath) = tips[0];
-            return new TooltipSegment
-            {
-                Tooltip = new RichTextTooltip
-                {
-                    Title = title,
-                    Description = desc,
-                    IsDebuff = isDebuff,
-                    IconPath = iconPath
-                }
-            };
-        }
-
-        // TODO: 如果有多个 tooltip，需要重构方案来正确发送，目前所有都只能 Send 一个 Segment，无法表达多个 tooltip 的情况
-    }
-
-    private static void SendItemSegment(TooltipSegment segment)
-    {
-        var store = ChatStore.Instance;
-        if (store == null)
-        {
-            Log.Warn("ChatStore.Instance is null");
-            return;
-        }
-
-        store.Dispatch(new IntentSendSegments
-        {
-            ReceiverId = 0,
-            Segments = [segment]
-        });
-    }
+    #endregion
 }

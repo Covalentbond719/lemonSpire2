@@ -10,7 +10,7 @@ public record CardRewardGroup
 {
     public string GroupId { get; set; } = "";
     public CardRewardSourceType Source { get; set; }
-    public Collection<CardEntry> Cards { get; set; } = [];
+    public Collection<CardEntry> Cards { get; init; } = [];
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
 
     public void Serialize(PacketWriter writer)
@@ -28,7 +28,6 @@ public record CardRewardGroup
         GroupId = reader.ReadString();
         Source = (CardRewardSourceType)reader.ReadInt();
         var count = reader.ReadInt();
-        Cards = [];
         for (var i = 0; i < count; i++)
         {
             var entry = new CardEntry();

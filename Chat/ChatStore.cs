@@ -1,3 +1,5 @@
+using lemonSpire2.Chat.Input;
+using lemonSpire2.Chat.Input.Command;
 using lemonSpire2.Chat.Intent;
 using lemonSpire2.Chat.Message;
 using lemonSpire2.util;
@@ -10,6 +12,7 @@ namespace lemonSpire2.Chat;
 public class ChatStore
 {
     private readonly INetGameService _netService;
+    private Action<string>? _inputTextInserter;
 
     public ChatStore(INetGameService netService)
     {
@@ -22,19 +25,24 @@ public class ChatStore
         // 注册核心基础意图的处理逻辑
         IntentRegistry.Register<IntentTextSubmit>(i =>
         {
-            var safeText = BbCodeUtils.AutoCloseUnclosedTags(i.Text);
+            var text = BbCodeUtils.AutoCloseUnclosedTags(i.Text);
 
-            // Fill sender ID, name, and UTC timestamp
-            var senderId = _netService.NetId;
-            var senderName = PlatformUtil.GetPlayerName(_netService.Platform, senderId);
-            var msg = new ChatMessage
+            // Slash 命令在本地先消费；只有明确判定“不是命令”时，才继续走普通聊天解析。
+            var commandResult = InputServices.CommandProcessor.Process(text);
+            if (commandResult is not NotAChatCmdResult)
             {
-                SenderId = senderId, // Will be filled by ChatStore
-                SenderName = senderName,
-                Timestamp = DateTimeOffset.UtcNow,
-                Segments = [new RichTextSegment { Text = safeText }]
-            };
-            Dispatch(new IntentSendMessage { Message = msg });
+                HandleCommandResult(commandResult);
+                return true;
+            }
+
+            var result = InputServices.Parser.Parse(text);
+
+            Dispatch(new IntentSendSegments
+            {
+                Segments = result
+            });
+
+            return true;
         });
 
         IntentRegistry.Register<IntentSendSegments>(i =>
@@ -51,12 +59,20 @@ public class ChatStore
                 Segments = i.Segments
             };
             Dispatch(new IntentSendMessage { Message = msg });
+            return true;
         });
 
         IntentRegistry.Register<IntentSendMessage>(i =>
-            OnSendMessage(i.Message)
+            {
+                OnSendMessage(i.Message);
+                return true;
+            }
         );
-        IntentRegistry.Register<IntentReceiveMessage>(i => { Model.AppendMessage(i.Message); });
+        IntentRegistry.Register<IntentReceiveMessage>(i =>
+        {
+            Model.AppendMessage(i.Message);
+            return true;
+        });
     }
 
     private static Logger Log => ChatUiPatch.Log;
@@ -67,6 +83,9 @@ public class ChatStore
     public static ChatStore? Instance { get; internal set; }
 
     public ChatModel Model { get; init; }
+    public ChatInputServices InputServices { get; } = new();
+
+    public ulong LocalNetId => _netService.NetId;
 
     // Expose for external handlers (e.g., TooltipManager)
     public IntentHandlerRegistry IntentRegistry { get; } = new();
@@ -76,6 +95,66 @@ public class ChatStore
     {
         // 先去注册表里找有没有人能处理这个 Intent
         return IntentRegistry.TryHandle(intent);
+    }
+
+    public void RegisterInputTextInserter(Action<string> inserter)
+    {
+        ArgumentNullException.ThrowIfNull(inserter);
+        _inputTextInserter = inserter;
+    }
+
+    private void HandleCommandResult(ChatCmdResult result)
+    {
+        switch (result)
+        {
+            // 纯本地反馈：例如 /help、参数错误等，直接回灌到聊天模型，不发网。
+            case LocalDisplayChatCmdResult display:
+                AppendLocalSystemMessage(display.HeaderText, display.Text);
+                return;
+            case ErrorChatCmdResult error:
+                AppendLocalSystemMessage(error.HeaderText, error.Message);
+                return;
+            // 命令执行产出了“像普通消息一样发送的 segment”，这里复用现有发送链路。
+            case SendSegmentsChatCmdResult send:
+                foreach (var message in send.Messages)
+                    Dispatch(new IntentSendSegments
+                    {
+                        ReceiverId = message.ReceiverId,
+                        Segments = message.Segments
+                    });
+                return;
+            case NotAChatCmdResult:
+                return;
+            default:
+                throw new InvalidOperationException($"Unknown chat command result type: {result.GetType().FullName}");
+        }
+    }
+
+    private void AppendLocalSystemMessage(string headerText, string text)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(headerText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        // 这里故意走 IntentReceiveMessage 而不是 SendMessage：
+        // 系统消息只显示给本地，不进入网络层，也不触发发送者回显逻辑。
+        Dispatch(new IntentReceiveMessage
+        {
+            Message = new ChatMessage
+            {
+                SenderId = 0,
+                SenderName = headerText,
+                ReceiverId = LocalNetId,
+                Timestamp = DateTimeOffset.UtcNow,
+                Segments =
+                [
+                    new TextDisplaySegment
+                    {
+                        HeaderText = headerText,
+                        Text = text
+                    }
+                ]
+            }
+        });
     }
 
     private void OnSendMessage(ChatMessage message)
@@ -103,6 +182,8 @@ public class ChatStore
             return; // 不是发给我的消息，忽略
         }
 
+        chatMessage.NotificationSound = ResolveNotificationSound(chatMessage);
+
         var intentReceiveMessage = new IntentReceiveMessage
         {
             Message = chatMessage
@@ -115,6 +196,25 @@ public class ChatStore
         }
 
         ChatUiPatch.Log.Error("Basic intent registered, should not happen! ");
+    }
+
+    private ChatNotificationSound ResolveNotificationSound(ChatMessage chatMessage)
+    {
+        ArgumentNullException.ThrowIfNull(chatMessage);
+
+        if (chatMessage.SenderId != _netService.NetId && ContainsMentionForLocalPlayer(chatMessage))
+            return ChatNotificationSound.AtMessage;
+
+        return ChatNotificationSound.ReceiveMessage;
+    }
+
+    private bool ContainsMentionForLocalPlayer(ChatMessage chatMessage)
+    {
+        ArgumentNullException.ThrowIfNull(chatMessage);
+
+        return chatMessage.Segments.OfType<EntitySegment>()
+            .Any(segment =>
+                segment.Kind == EntitySegment.EntityKind.Player && segment.PlayerNetId == _netService.NetId);
     }
 
     /// <summary>
@@ -136,5 +236,26 @@ public class ChatStore
             Segments = segments
         });
         Log.Info($"Sent to chat: {string.Join(", ", segments.Select(s => s.Render()))}");
+    }
+
+    public static bool TryInsertIntoInput(string text)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        var store = Instance;
+        if (store == null)
+        {
+            Log.Warn("ChatStore.Instance is null");
+            return false;
+        }
+
+        if (store._inputTextInserter == null)
+        {
+            Log.Warn("Chat input inserter is not registered");
+            return false;
+        }
+
+        store._inputTextInserter(text);
+        return true;
     }
 }

@@ -1,8 +1,5 @@
 using Godot;
 using lemonSpire2.util;
-using MegaCrit.Sts2.Core.Entities.Relics;
-using MegaCrit.Sts2.Core.Helpers;
-using MegaCrit.Sts2.Core.HoverTips;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Multiplayer.Serialization;
 
@@ -23,28 +20,12 @@ public sealed class RelicTooltip : Tooltip
         };
     }
 
-    public static Color GetRelicRarityColor(RelicRarity rarity)
-    {
-        return rarity switch
-        {
-            RelicRarity.Starter => StsColors.cardTitleOutlineCommon,
-            RelicRarity.Common => StsColors.cardTitleOutlineCommon,
-            RelicRarity.Uncommon => StsColors.cardTitleOutlineUncommon,
-            RelicRarity.Rare => StsColors.cardTitleOutlineRare,
-            RelicRarity.Shop => StsColors.cardTitleOutlineSpecial,
-            RelicRarity.Event => StsColors.cardTitleOutlineSpecial,
-            RelicRarity.Ancient => StsColors.cardTitleOutlineSpecial,
-            RelicRarity.None => StsColors.cream,
-            _ => throw new ArgumentOutOfRangeException(nameof(rarity), rarity, null)
-        };
-    }
-
     public override string Render()
     {
         var model = ResolveModel();
         if (model is null) return "Broken Relic";
 
-        var color = GetRelicRarityColor(model.Rarity);
+        var color = StsUtil.GetRarityColor(model.Rarity);
         var iconPath = model.IconPath;
 
         return $"[img={16}x{16}]{iconPath}[/img] [color={color.ToHtml()}]{model.Title.GetFormattedText()}[/color]";
@@ -65,18 +46,7 @@ public sealed class RelicTooltip : Tooltip
     public override Control? CreatePreview()
     {
         var model = ResolveModel();
-        if (model is null) return null;
-
-        return BuildHoverTipControl(model.HoverTip, model.Icon);
-    }
-
-    public override IHoverTip ToHoverTip()
-    {
-        var model = ResolveModel();
-        if (model is null)
-            throw new InvalidOperationException($"Cannot resolve relic model: {ModelIdStr}");
-
-        return model.HoverTip;
+        return model is null ? null : BuildHoverTipControl(model.HoverTip, model.Icon);
     }
 
     private RelicModel? ResolveModel()

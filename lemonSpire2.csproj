@@ -74,20 +74,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="Alchyr.Sts2.BaseLib" Version="*" PrivateAssets="All"/>
         <AdditionalFiles Include="lemonSpire2/localization/**/*.json"/>
     </ItemGroup>
 
     <ItemGroup>
         <Compile Remove="lemonSpire2/**"/>
+        <Compile Remove="lemonSpire2.Tests/**"/>
         <Compile Remove="materials/**"/>
         <Compile Remove="shaders/**"/>
         <Compile Remove="images/**"/>
         <EmbeddedResource Remove="lemonSpire2/**"/>
+        <EmbeddedResource Remove="lemonSpire2.Tests/**"/>
         <EmbeddedResource Remove="materials/**"/>
         <EmbeddedResource Remove="shaders/**"/>
         <EmbeddedResource Remove="images/**"/>
@@ -99,17 +97,19 @@
         <None Include="project.godot"/>
         <None Include="export_presets.cfg"/>
         <None Include="lemonSpire2/**"/>
+        <None Include="*.md"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="All"/>
     </ItemGroup>
 
-
     <ItemGroup>
-        <Content Include="AGENTS.md"/>
-        <Content Include="Directory.Build.props"/>
-        <Content Include="*.md"/>
+        <SoundFiles Include="lemonSpire2/*.mp3"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="True">
+        <Publicize Include="sts2" IncludeVirtualMembers="false" IncludeCompilerGeneratedMembers="false"/>
     </ItemGroup>
 
     <Target Name="CheckDependencyPaths">
@@ -123,6 +123,8 @@
         <Message Text="Copying .dll and manifest to mods folder." Importance="high"/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/"/>
         <Copy SourceFiles="lemonSpire2.json" DestinationFolder="$(ModsPath)$(MSBuildProjectName)/"/>
+        <Copy SourceFiles="@(SoundFiles)"
+              DestinationFiles="@(SoundFiles->'$(ModsPath)$(MSBuildProjectName)/lemonSpire2/%(Filename)%(Extension)')"/>
         <Message Text="Copying BaseLib to mods folder." Importance="high"/>
         <ItemGroup>
             <BaseLibFiles Include="$(NuGetPackageRoot)/alchyr.sts2.baselib/**/lib/**/BaseLib.dll;$(NuGetPackageRoot)/alchyr.sts2.baselib/**/Content/BaseLib.pck;$(NuGetPackageRoot)/alchyr.sts2.baselib/**/Content/BaseLib.json;"/>

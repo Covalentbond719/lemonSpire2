@@ -1,5 +1,6 @@
 using Godot;
 using lemonSpire2.Chat.Intent;
+using lemonSpire2.Chat.Message;
 using lemonSpire2.Tooltips;
 
 namespace lemonSpire2.Chat.Ui;
@@ -57,19 +58,22 @@ public sealed class TooltipManager
         _currentPreview.GlobalPosition = new Vector2(tipX, tipY);
     }
 
-    private void OnHoverStart(IntentMetaHoverStart intent)
+    private bool OnHoverStart(IntentMetaHoverStart intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return false;
+
         if (_parent is null)
         {
             ChatUiPatch.Log.Error("execute hover start without parent defined??? skipped.");
-            return;
+            return false;
         }
 
         var mousePosition = intent.GlobalPosition;
 
         // Skip if same meta
         if (_currentMeta == intent.Meta && _currentPreview is not null)
-            return;
+            return true;
 
         ClearPreview();
 
@@ -77,14 +81,14 @@ public sealed class TooltipManager
         if (tooltip is null)
         {
             ChatUiPatch.Log.Warn($"Failed to resolve tooltip from meta: {intent.Meta}");
-            return;
+            return false;
         }
 
         var preview = tooltip.CreatePreview();
         if (preview is null)
         {
             ChatUiPatch.Log.Warn($"CreatePreview returned null for {tooltip.GetType().Name}");
-            return;
+            return false;
         }
 
         _currentPreview = preview;
@@ -92,25 +96,31 @@ public sealed class TooltipManager
 
         UpdatePreviewPosition(mousePosition);
         _parent.AddChild(preview);
+        return true;
     }
 
-    private void OnHoverEnd(IntentMetaHoverEnd intent)
+    private bool OnHoverEnd(IntentMetaHoverEnd intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return false;
+
         ClearPreview();
+        return true;
     }
 
-    private void OnClick(IntentMetaClick intent)
+    private bool OnClick(IntentMetaClick intent)
     {
+        if (EntitySegment.IsEntityMeta(intent.Meta))
+            return false;
+
         ClearPreview();
+        return true;
     }
 
     private void ClearPreview()
     {
-        if (_currentPreview is not null)
-        {
-            _currentPreview.QueueFree();
-            _currentPreview = null;
-        }
+        _currentPreview?.QueueFree();
+        _currentPreview = null;
 
         _currentMeta = null;
     }

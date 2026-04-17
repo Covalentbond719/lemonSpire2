@@ -1,5 +1,6 @@
 using Godot;
 using lemonSpire2.Chat.Message;
+using lemonSpire2.PlayerStateEx.RemoteFlash;
 using lemonSpire2.SyncReward;
 using lemonSpire2.Tooltips;
 using lemonSpire2.util;
@@ -26,6 +27,7 @@ public class CardRewardProvider : IPlayerPanelProvider
 
     private static void OnCardClicked(Player player, CardModel card)
     {
+        PlayerPanelChatHelper.RequestRemoteFlash(player, RemoteUiFlashKind.CardReward, card);
         if (!Input.IsKeyPressed(Key.Alt)) return;
 
         var segment = new TooltipSegment
@@ -40,7 +42,7 @@ public class CardRewardProvider : IPlayerPanelProvider
 
     #region IPlayerPanelProvider
 
-    public string ProviderId => "card_rewards";
+    public string Id => "card_rewards";
     public int Priority => 15;
     public string DisplayName => new LocString("gameplay_ui", "LEMONSPIRE.panel.cardRewards").GetFormattedText();
 

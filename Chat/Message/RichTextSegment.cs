@@ -19,12 +19,6 @@ public record RichTextSegment : IMsgSegment
         Text = reader.ReadString();
     }
 
-    public void RenderTo(RichTextLabel label)
-    {
-        ArgumentNullException.ThrowIfNull(label);
-        label.AppendText(Text);
-    }
-
     public string Render()
     {
         return Text;

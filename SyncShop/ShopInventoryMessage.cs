@@ -13,7 +13,7 @@ public record ShopInventoryMessage : BasePlayerMessage
     /// <summary>
     ///     商店物品列表
     /// </summary>
-    public required Collection<ShopItemEntry> Items { get; set; } = [];
+    public required Collection<ShopItemEntry> Items { get; init; } = [];
 
     /// <summary>
     ///     是否为清空消息（离开商店时发送）
@@ -35,7 +35,6 @@ public record ShopInventoryMessage : BasePlayerMessage
         SenderId = reader.ReadULong();
         IsClear = reader.ReadBool();
         var count = reader.ReadInt();
-        Items = [];
         for (var i = 0; i < count; i++)
         {
             var entry = new ShopItemEntry();
